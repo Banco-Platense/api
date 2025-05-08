@@ -1,13 +1,10 @@
-FROM openjdk:21-jdk-slim
-
-# Set the working directory
-WORKDIR /app
-
-# Copy the fat JAR file into the container
-COPY build/libs/*.jar app.jar
-
-# Expose the port the application runs on
+FROM gradle:8.10.0-jdk21 AS build
+COPY  . /home/gradle/src
+WORKDIR /home/gradle/src
+RUN gradle assemble
+FROM eclipse-temurin:21-jre-alpine
 EXPOSE 8080
+RUN mkdir /app
+COPY --from=build /home/gradle/src/build/libs/*.jar /app/app.jar
 
-# Command to run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
