@@ -1,5 +1,7 @@
 package com.banco_platense.api.service
 
+import com.banco_platense.api.ApiApplication
+import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
 import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.entity.Transaction
@@ -17,7 +19,11 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @SpringBootTest(
-    classes = [TestSecurityConfig::class],
+    classes = [
+        ApiApplication::class,
+        TestSecurityConfig::class,
+        TestApplicationConfig::class
+    ],
     properties = ["spring.main.allow-bean-definition-overriding=true"]
 )
 @ActiveProfiles("test")

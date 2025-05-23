@@ -1,54 +1,49 @@
 package com.banco_platense.api.controller
 
-import com.banco_platense.api.config.TestJacksonConfig
-import com.banco_platense.api.config.TestSecurityConfig
 import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.dto.TransactionResponseDto
 import com.banco_platense.api.dto.WalletResponseDto
 import com.banco_platense.api.entity.TransactionType
 import com.banco_platense.api.service.WalletService
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.kotlin.whenever
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
+import org.mockito.InjectMocks
+import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.http.MediaType
-import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
 
-@ExtendWith(SpringExtension::class)
-@WebMvcTest(WalletController::class)
-@Import(TestSecurityConfig::class, TestJacksonConfig::class)
+@ExtendWith(MockitoExtension::class)
 class WalletControllerTest {
 
-    @Autowired
-    private lateinit var webApplicationContext: WebApplicationContext
-
-    @MockBean
+    @Mock
     private lateinit var walletService: WalletService
+
+    @InjectMocks
+    private lateinit var walletController: WalletController
 
     private lateinit var mockMvc: MockMvc
     private lateinit var objectMapper: ObjectMapper
 
     @BeforeEach
     fun setup() {
-        mockMvc = MockMvcBuilders
-            .webAppContextSetup(webApplicationContext)
+        mockMvc = MockMvcBuilders.standaloneSetup(walletController)
+            .setControllerAdvice(ExceptionHandler::class.java)
             .build()
+            
         objectMapper = ObjectMapper().apply {
-            registerModule(com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
-            configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+            registerModule(JavaTimeModule())
+            disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
         }
     }
 
@@ -64,7 +59,7 @@ class WalletControllerTest {
             updatedAt = LocalDateTime.now()
         )
         
-        whenever(walletService.getWalletByUserId(userId)).thenReturn(wallet)
+        `when`(walletService.getWalletByUserId(userId)).thenReturn(wallet)
 
         // When and then
         mockMvc.perform(get("/api/v1/wallets/user/$userId"))
@@ -79,7 +74,7 @@ class WalletControllerTest {
         // Given
         val userId = 999L
         
-        whenever(walletService.getWalletByUserId(userId))
+        `when`(walletService.getWalletByUserId(userId))
             .thenThrow(NoSuchElementException("Wallet not found for user ID: $userId"))
 
         // When and Then
@@ -111,7 +106,7 @@ class WalletControllerTest {
             externalWalletInfo = "Bank Account 123456"
         )
         
-        whenever(walletService.createTransaction(walletId, createTransactionDto))
+        `when`(walletService.createTransaction(walletId, createTransactionDto))
             .thenReturn(transactionResponse)
 
         // When and then
@@ -154,7 +149,7 @@ class WalletControllerTest {
             )
         )
         
-        whenever(walletService.getTransactionsByWalletId(walletId)).thenReturn(transactions)
+        `when`(walletService.getTransactionsByWalletId(walletId)).thenReturn(transactions)
 
         // When and then
         mockMvc.perform(get("/api/v1/wallets/$walletId/transactions"))
