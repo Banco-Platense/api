@@ -7,14 +7,17 @@ import com.banco_platense.api.entity.User
 import com.banco_platense.api.repository.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class UserService(
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    private val walletService: WalletService
 ) {
     private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$")
 
+    @Transactional
     fun registerUser(registrationRequest: RegistrationRequest): RegistrationResult {
         if (!emailRegex.matches(registrationRequest.email)) {
             return RegistrationResult.Failure("Invalid email format")
@@ -35,6 +38,10 @@ class UserService(
         )
 
         val saved = userRepository.save(user)
+        
+        // Create a wallet for the new user with initial balance of 0
+        walletService.createWallet(saved.id!!)
+        
         return RegistrationResult.Success(saved.id!!)
     }
 }
