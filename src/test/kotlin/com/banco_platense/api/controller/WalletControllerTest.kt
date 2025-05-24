@@ -7,6 +7,8 @@ import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.dto.TransactionResponseDto
 import com.banco_platense.api.dto.WalletResponseDto
 import com.banco_platense.api.entity.TransactionType
+import com.banco_platense.api.entity.User
+import com.banco_platense.api.repository.UserRepository
 import com.banco_platense.api.service.WalletService
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
@@ -18,8 +20,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.context.SecurityContext
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -42,11 +46,22 @@ class WalletControllerTest {
     private lateinit var walletService: WalletService
     
     @MockBean
+    private lateinit var userRepository: UserRepository
+    
+    @MockBean
     private lateinit var jwtUtil: JwtUtil
 
     private lateinit var mockMvc: MockMvc
     private lateinit var objectMapper: ObjectMapper
-    private lateinit var mockJwtToken: String
+    private var mockJwtToken: String = "mock-jwt-token"
+    private val testUser = User(id = 1L, username = "testuser", email = "test@example.com", passwordHash = "hashedpw", drinks = com.banco_platense.api.entity.Drink.COFFEE)
+    private val testWallet = WalletResponseDto(
+        id = 1L,
+        userId = 1L,
+        balance = 100.0,
+        createdAt = LocalDateTime.now(),
+        updatedAt = LocalDateTime.now()
+    )
 
     @BeforeEach
     fun setup() {
@@ -58,17 +73,21 @@ class WalletControllerTest {
             configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         }
         
-        // Setup mock JWT token
-        val userDetails = User(
-            "testuser", 
-            "password", 
-            listOf(SimpleGrantedAuthority("ROLE_USER"))
-        )
-        mockJwtToken = "mock-jwt-token"
-        whenever(jwtUtil.extractUsername(mockJwtToken)).thenReturn("testuser")
-        whenever(jwtUtil.validateToken(mockJwtToken, userDetails)).thenReturn(true)
+        // Setup security context mock
+        val authentication = org.mockito.Mockito.mock(Authentication::class.java)
+        val securityContext = org.mockito.Mockito.mock(SecurityContext::class.java)
+        whenever(securityContext.authentication).thenReturn(authentication)
+        whenever(authentication.name).thenReturn("testuser")
+        SecurityContextHolder.setContext(securityContext)
+        
+        // Mock user repository response
+        whenever(userRepository.findByUsername("testuser")).thenReturn(testUser)
+        
+        // Setup mock wallet service response
+        whenever(walletService.getWalletByUserId(testUser.id!!)).thenReturn(testWallet)
     }
 
+    @WithMockUser(username = "testuser")
     @Test
     fun `should get wallet by user id`() {
         // Given
@@ -87,13 +106,14 @@ class WalletControllerTest {
         mockMvc.perform(get("/api/v1/wallets/user/$userId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.id").value(wallet.id))
-            .andExpect(jsonPath("$.userId").value(wallet.userId))
-            .andExpect(jsonPath("$.balance").value(wallet.balance))
+            .andExpect(jsonPath("$.id").value(testWallet.id))
+            .andExpect(jsonPath("$.userId").value(testWallet.userId))
+            .andExpect(jsonPath("$.balance").value(testWallet.balance))
     }
 
     @Test
-    fun `should return not found when wallet does not exist`() {
+    @WithMockUser(username = "testuser")
+    fun `should not be able to get other people's wallets`() {
         // Given
         val userId = 999L
 
@@ -103,19 +123,18 @@ class WalletControllerTest {
         // When and Then
         mockMvc.perform(get("/api/v1/wallets/user/$userId")
             .header("Authorization", "Bearer $mockJwtToken"))
-            .andExpect(status().isNotFound)
+            .andExpect(status().isForbidden)
     }
 
     @Test
+    @WithMockUser(username = "testuser")
     fun `should create transaction successfully`() {
         // Given
-        val walletId = 1L
         val createTransactionDto = CreateTransactionDto(
             type = TransactionType.EXTERNAL_TOPUP,
             amount = 50.0,
             description = "Top up from bank account",
-            senderWalletId = null,
-            receiverWalletId = walletId,
+            receiverWalletId = null,
             externalWalletInfo = "Bank Account 123456"
         )
 
@@ -126,16 +145,16 @@ class WalletControllerTest {
             timestamp = LocalDateTime.now(),
             description = "Top up from bank account",
             senderWalletId = null,
-            receiverWalletId = walletId,
+            receiverWalletId = testWallet.id,
             externalWalletInfo = "Bank Account 123456"
         )
 
-        whenever(walletService.createTransaction(walletId, createTransactionDto))
+        whenever(walletService.createTransaction(testWallet.id, createTransactionDto))
             .thenReturn(transactionResponse)
 
         // When and then
         mockMvc.perform(
-            post("/api/v1/wallets/$walletId/transactions")
+            post("/api/v1/wallets/${testWallet.id}/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTransactionDto))
                 .header("Authorization", "Bearer $mockJwtToken")
@@ -148,9 +167,9 @@ class WalletControllerTest {
     }
 
     @Test
-    fun `should return all transactions for a wallet`() {
+    @WithMockUser(username = "testuser")
+    fun `should return all transactions for my wallet`() {
         // Given
-        val walletId = 1L
         val transactions = listOf(
             TransactionResponseDto(
                 id = 1L,
@@ -159,7 +178,7 @@ class WalletControllerTest {
                 timestamp = LocalDateTime.now(),
                 description = "Initial deposit",
                 senderWalletId = null,
-                receiverWalletId = walletId,
+                receiverWalletId = testWallet.id,
                 externalWalletInfo = "Bank Account"
             ),
             TransactionResponseDto(
@@ -168,16 +187,16 @@ class WalletControllerTest {
                 amount = 25.0,
                 timestamp = LocalDateTime.now(),
                 description = "Payment for services",
-                senderWalletId = walletId,
+                senderWalletId = testWallet.id,
                 receiverWalletId = null,
                 externalWalletInfo = "Merchant XYZ"
             )
         )
 
-        whenever(walletService.getTransactionsByWalletId(walletId)).thenReturn(transactions)
+        whenever(walletService.getTransactionsByWalletId(testWallet.id)).thenReturn(transactions)
 
         // When and then
-        mockMvc.perform(get("/api/v1/wallets/$walletId/transactions")
+        mockMvc.perform(get("/api/v1/wallets/${testWallet.id}/transactions")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].id").value(transactions[0].id))
@@ -187,4 +206,17 @@ class WalletControllerTest {
             .andExpect(jsonPath("$[1].type").value(transactions[1].type.toString()))
             .andExpect(jsonPath("$[1].amount").value(transactions[1].amount))
     }
-} 
+
+    @Test
+    @WithMockUser(username = "testuser")
+    fun `should forbid access to other user's wallet`() {
+        // Given
+        val otherUserId = 2L
+
+        // When and Then
+        mockMvc.perform(get("/api/v1/wallets/user/$otherUserId")
+            .header("Authorization", "Bearer $mockJwtToken"))
+            .andExpect(status().isForbidden)
+    }
+    
+}
