@@ -7,9 +7,9 @@ data class CreateTransactionDto(
     val type: TransactionType,
     val amount: Double,
     val description: String,
-    val senderWalletId: Long?,
-    val receiverWalletId: Long?,
-    val externalWalletInfo: String?
+    val senderWalletId: Long? = null,
+    val receiverWalletId: Long? = null,
+    val externalWalletInfo: String? = null
 )
 
 data class TransactionResponseDto(
