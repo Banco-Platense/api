@@ -40,6 +40,7 @@ class WalletServiceTest {
     private lateinit var walletService: WalletService
 
     private lateinit var testWallet: Wallet
+    private lateinit var recipientWallet: Wallet
     
     @BeforeEach
     fun setup() {
@@ -54,12 +55,21 @@ class WalletServiceTest {
                 updatedAt = LocalDateTime.now()
             )
         )
+        
+        recipientWallet = walletRepository.save(
+            Wallet(
+                userId = 2L,
+                balance = 50.0,
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now()
+            )
+        )
     }
     
     @Test
     fun `should create wallet for user`() {
         // Given
-        val userId = 2L
+        val userId = 3L
         
         // When
         val result = walletService.createWallet(userId)
@@ -109,8 +119,6 @@ class WalletServiceTest {
             type = TransactionType.EXTERNAL_TOPUP,
             amount = topupAmount,
             description = "Top up from bank account",
-            senderWalletId = null,
-            receiverWalletId = testWallet.id,
             externalWalletInfo = "Bank Account 123456"
         )
         
@@ -145,8 +153,6 @@ class WalletServiceTest {
             type = TransactionType.EXTERNAL_DEBIT,
             amount = debitAmount,
             description = "Payment for services",
-            senderWalletId = testWallet.id,
-            receiverWalletId = null,
             externalWalletInfo = "Merchant XYZ"
         )
         
@@ -172,6 +178,46 @@ class WalletServiceTest {
     }
     
     @Test
+    fun `should create P2P transaction`() {
+        // Given
+        val initialSenderBalance = testWallet.balance
+        val initialReceiverBalance = recipientWallet.balance
+        val transferAmount = 50.0
+        
+        val createDto = CreateTransactionDto(
+            type = TransactionType.P2P,
+            amount = transferAmount,
+            description = "Money transfer to friend",
+            receiverWalletId = recipientWallet.id
+        )
+        
+        // When
+        val result = walletService.createTransaction(testWallet.id, createDto)
+        
+        // Then
+        assertNotNull(result.id)
+        assertEquals(TransactionType.P2P, result.type)
+        assertEquals(transferAmount, result.amount)
+        assertEquals("Money transfer to friend", result.description)
+        assertEquals(testWallet.id, result.senderWalletId)
+        assertEquals(recipientWallet.id, result.receiverWalletId)
+        
+        // Verify sender balance was updated
+        val updatedSenderWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        assertEquals(initialSenderBalance - transferAmount, updatedSenderWallet.balance)
+        
+        // Verify receiver balance was updated
+        val updatedReceiverWallet = walletRepository.findById(recipientWallet.id).orElseThrow()
+        assertEquals(initialReceiverBalance + transferAmount, updatedReceiverWallet.balance)
+        
+        // Verify transaction was saved
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id)
+        assertEquals(1, transactions.size)
+        assertEquals(TransactionType.P2P, transactions[0].type)
+        assertEquals(transferAmount, transactions[0].amount)
+    }
+    
+    @Test
     fun `should throw exception when insufficient funds for debit transaction`() {
         // Given
         val excessiveAmount = 200.0
@@ -180,8 +226,6 @@ class WalletServiceTest {
             type = TransactionType.EXTERNAL_DEBIT,
             amount = excessiveAmount,
             description = "Payment for services",
-            senderWalletId = testWallet.id,
-            receiverWalletId = null,
             externalWalletInfo = "Merchant XYZ"
         )
         
@@ -191,6 +235,24 @@ class WalletServiceTest {
         }
         
         assertTrue(exception.message?.contains("Insufficient funds") == true)
+    }
+    
+    @Test
+    fun `should throw exception when trying to send to self`() {
+        // Given
+        val createDto = CreateTransactionDto(
+            type = TransactionType.P2P,
+            amount = 50.0,
+            description = "Transfer to self",
+            receiverWalletId = testWallet.id
+        )
+        
+        // When & Then
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            walletService.createTransaction(testWallet.id, createDto)
+        }
+        
+        assertTrue(exception.message?.contains("Cannot send money to yourself") == true)
     }
     
     @Test

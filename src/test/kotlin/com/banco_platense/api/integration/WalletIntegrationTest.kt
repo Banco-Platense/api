@@ -4,10 +4,13 @@ import com.banco_platense.api.ApiApplication
 import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
 import com.banco_platense.api.dto.CreateTransactionDto
+import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.Transaction
 import com.banco_platense.api.entity.TransactionType
+import com.banco_platense.api.entity.User
 import com.banco_platense.api.entity.Wallet
 import com.banco_platense.api.repository.TransactionRepository
+import com.banco_platense.api.repository.UserRepository
 import com.banco_platense.api.repository.WalletRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -19,13 +22,18 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
+import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
 
 @SpringBootTest(
@@ -45,7 +53,13 @@ class WalletIntegrationTest {
     private lateinit var mockMvc: MockMvc
 
     @Autowired
+    private lateinit var webApplicationContext: WebApplicationContext
+
+    @Autowired
     private lateinit var walletRepository: WalletRepository
+
+    @Autowired
+    private lateinit var userRepository: UserRepository
 
     @Autowired
     private lateinit var transactionRepository: TransactionRepository
@@ -53,17 +67,57 @@ class WalletIntegrationTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
+    private lateinit var testUser: User
     private lateinit var testWallet: Wallet
+    private lateinit var otherUser: User
+    private lateinit var otherWallet: Wallet
 
     @BeforeEach
     fun setup() {
+        // Clean up repositories
         transactionRepository.deleteAll()
         walletRepository.deleteAll()
+        userRepository.deleteAll()
         
+        // Configure MockMvc with security
+        mockMvc = MockMvcBuilders
+            .webAppContextSetup(webApplicationContext)
+            .apply<DefaultMockMvcBuilder>(SecurityMockMvcConfigurers.springSecurity())
+            .build()
+        
+        // Set up test users
+        testUser = userRepository.save(
+            User(
+                email = "testuser@example.com",
+                username = "testuser",
+                passwordHash = "hashedpassword",
+                drinks = Drink.COFFEE
+            )
+        )
+        
+        otherUser = userRepository.save(
+            User(
+                email = "otheruser@example.com",
+                username = "otheruser",
+                passwordHash = "hashedpassword",
+                drinks = Drink.COFFEE
+            )
+        )
+        
+        // Set up test wallets
         testWallet = walletRepository.save(
             Wallet(
-                userId = 1L,
+                userId = testUser.id!!,
                 balance = 100.0,
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now()
+            )
+        )
+        
+        otherWallet = walletRepository.save(
+            Wallet(
+                userId = otherUser.id!!,
+                balance = 50.0,
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now()
             )
@@ -76,7 +130,8 @@ class WalletIntegrationTest {
     }
 
     @Test
-    fun `should get wallet by user id`() {
+    @WithMockUser(username = "testuser")
+    fun `should get my wallet`() {
         // When & then
         mockMvc.perform(get("/api/v1/wallets/user/${testWallet.userId}"))
             .andExpect(status().isOk)
@@ -86,6 +141,7 @@ class WalletIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "testuser")
     fun `should create external topup transaction and update wallet balance`() {
         // given
         val initialBalance = testWallet.balance
@@ -95,8 +151,6 @@ class WalletIntegrationTest {
             type = TransactionType.EXTERNAL_TOPUP,
             amount = topupAmount,
             description = "Top up from bank account",
-            senderWalletId = null,
-            receiverWalletId = testWallet.id,
             externalWalletInfo = "Bank Account 123456"
         )
 
@@ -115,7 +169,7 @@ class WalletIntegrationTest {
         val updatedWallet = walletRepository.findById(testWallet.id).orElseThrow()
         assertEquals(initialBalance + topupAmount, updatedWallet.balance)
         
-        // Make sure transaction was saved rAwr xd uwu
+        // Verify transaction was saved
         val transactions = transactionRepository.findByReceiverWalletId(testWallet.id)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_TOPUP, transactions[0].type)
@@ -123,6 +177,7 @@ class WalletIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "testuser")
     fun `should create external debit transaction and update wallet balance`() {
         // Given
         val initialBalance = testWallet.balance
@@ -132,8 +187,6 @@ class WalletIntegrationTest {
             type = TransactionType.EXTERNAL_DEBIT,
             amount = debitAmount,
             description = "Payment for services",
-            senderWalletId = testWallet.id,
-            receiverWalletId = null,
             externalWalletInfo = "Merchant XYZ"
         )
 
@@ -160,7 +213,48 @@ class WalletIntegrationTest {
     }
 
     @Test
-    fun `should return all transactions for a wallet`() {
+    @WithMockUser(username = "testuser")
+    fun `should create P2P transaction and update both wallets`() {
+        // Given
+        val initialSenderBalance = testWallet.balance
+        val initialReceiverBalance = otherWallet.balance
+        val transferAmount = 30.0
+        
+        val createTransactionDto = CreateTransactionDto(
+            type = TransactionType.P2P,
+            amount = transferAmount,
+            description = "Money transfer to friend",
+            receiverWalletId = otherWallet.id
+        )
+
+        // when
+        mockMvc.perform(
+            post("/api/v1/wallets/${testWallet.id}/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createTransactionDto))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.type").value(TransactionType.P2P.toString()))
+            .andExpect(jsonPath("$.amount").value(transferAmount))
+            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id))
+            .andExpect(jsonPath("$.receiverWalletId").value(otherWallet.id))
+
+        // Then
+        val updatedSenderWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        val updatedReceiverWallet = walletRepository.findById(otherWallet.id).orElseThrow()
+        assertEquals(initialSenderBalance - transferAmount, updatedSenderWallet.balance)
+        assertEquals(initialReceiverBalance + transferAmount, updatedReceiverWallet.balance)
+        
+        // Verify transaction was saved
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id)
+        assertEquals(1, transactions.size)
+        assertEquals(TransactionType.P2P, transactions[0].type)
+        assertEquals(transferAmount, transactions[0].amount)
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    fun `should return all transactions for my wallet regardless of order`() {
         // Given
         val sentTransaction = transactionRepository.save(
             Transaction(
@@ -169,10 +263,10 @@ class WalletIntegrationTest {
                 description = "Sent payment",
                 senderWalletId = testWallet.id,
                 receiverWalletId = null,
-                externalWalletInfo = "Merchant ABC"
+                externalWalletInfo = "Merchant ABC",
             )
         )
-        
+
         val receivedTransaction = transactionRepository.save(
             Transaction(
                 type = TransactionType.EXTERNAL_TOPUP,
@@ -180,20 +274,23 @@ class WalletIntegrationTest {
                 description = "Received top up",
                 senderWalletId = null,
                 receiverWalletId = testWallet.id,
-                externalWalletInfo = "Bank Account"
+                externalWalletInfo = "Bank Account",
             )
         )
 
         // When and then
         mockMvc.perform(get("/api/v1/wallets/${testWallet.id}/transactions"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].id").isNumber())
-            .andExpect(jsonPath("$[1].id").isNumber())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
+            .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.id.toInt(), receivedTransaction.id.toInt())))
+            .andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.type.toString(), receivedTransaction.type.toString())))
+            .andExpect(jsonPath("$[*].amount").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.amount, receivedTransaction.amount)))
+            .andExpect(jsonPath("$[*].description").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.description, receivedTransaction.description)))
     }
     
     @Test
+    @WithMockUser(username = "testuser")
     fun `should reject transaction with insufficient funds`() {
         // Given
         val excessiveAmount = 500.0
@@ -202,8 +299,6 @@ class WalletIntegrationTest {
             type = TransactionType.EXTERNAL_DEBIT,
             amount = excessiveAmount,
             description = "Payment that should fail",
-            senderWalletId = testWallet.id,
-            receiverWalletId = null,
             externalWalletInfo = "Merchant XYZ"
         )
 

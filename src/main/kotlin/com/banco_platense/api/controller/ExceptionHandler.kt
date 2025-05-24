@@ -1,7 +1,9 @@
 package com.banco_platense.api.controller
 
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 
@@ -16,6 +18,16 @@ class ExceptionHandler {
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(e: IllegalArgumentException): ResponseEntity<String> {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.message)
+    }
+
+    @ExceptionHandler(AuthenticationException::class)
+    fun handleAuthenticationException(e: AuthenticationException, request: HttpServletRequest): ResponseEntity<Map<String, String>> {
+        val errorResponse = mapOf(
+            "error" to "Authentication failed",
+            "message" to (e.message ?: "Unknown authentication error"),
+            "type" to e.javaClass.simpleName
+        )
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse)
     }
 
     @ExceptionHandler(Exception::class)

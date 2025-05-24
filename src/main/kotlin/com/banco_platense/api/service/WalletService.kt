@@ -42,6 +42,12 @@ class WalletService(
         val wallet = walletRepository.findById(walletId)
             .orElseThrow { NoSuchElementException("Wallet not found with ID: $walletId") }
 
+        if (createDto.senderWalletId != null && createDto.type != TransactionType.EXTERNAL_TOPUP) {
+            require(createDto.senderWalletId == walletId) {
+                "For security reasons, senderWalletId must match the authenticated user's wallet ID" 
+            }
+        }
+
         validateTransaction(wallet, createDto)
         
         val transaction = Transaction(
@@ -55,7 +61,7 @@ class WalletService(
                 TransactionType.EXTERNAL_TOPUP -> null
             },
             receiverWalletId = when (createDto.type) {
-                TransactionType.P2P,
+                TransactionType.P2P -> createDto.receiverWalletId
                 TransactionType.EXTERNAL_TOPUP -> walletId
                 TransactionType.EXTERNAL_DEBIT -> null
             },
@@ -64,6 +70,14 @@ class WalletService(
         
         val savedTransaction = transactionRepository.save(transaction)
         updateWalletBalance(wallet, createDto)
+        
+        if (createDto.type == TransactionType.P2P && createDto.receiverWalletId != null) {
+            val receiverWallet = walletRepository.findById(createDto.receiverWalletId)
+                .orElseThrow { NoSuchElementException("Receiver wallet not found with ID: ${createDto.receiverWalletId}") }
+            receiverWallet.balance += createDto.amount
+            receiverWallet.updatedAt = LocalDateTime.now()
+            walletRepository.save(receiverWallet)
+        }
         
         return mapToTransactionResponseDto(savedTransaction)
     }
@@ -86,6 +100,8 @@ class WalletService(
             TransactionType.P2P -> {
                 require(createDto.amount > 0) { "Amount must be positive for P2P transactions" }
                 require(wallet.balance >= createDto.amount) { "Insufficient funds" }
+                requireNotNull(createDto.receiverWalletId) { "Receiver wallet ID is required for P2P transactions" }
+                require(createDto.receiverWalletId != wallet.id) { "Cannot send money to yourself" }
             }
             TransactionType.EXTERNAL_TOPUP -> {
                 require(createDto.amount > 0) { "Amount must be positive for external topup" }
