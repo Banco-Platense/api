@@ -19,9 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.context.SecurityContext
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.junit.jupiter.SpringExtension
@@ -30,18 +27,19 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
 import java.util.UUID
 
 @ExtendWith(SpringExtension::class)
-@WebMvcTest(WalletController::class)
-@Import(TestSecurityConfig::class, TestJacksonConfig::class)
+@WebMvcTest(controllers = [WalletController::class], excludeFilters = [org.springframework.context.annotation.ComponentScan.Filter(type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE, classes = [com.banco_platense.api.config.JwtAuthenticationFilter::class])])
+@Import(TestSecurityConfig::class, TestJacksonConfig::class, ExceptionHandler::class)
 class WalletControllerTest {
 
     @Autowired
-    private lateinit var webApplicationContext: WebApplicationContext
+    private lateinit var mockMvc: MockMvc
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     @MockitoBean
     private lateinit var walletService: WalletService
@@ -49,11 +47,6 @@ class WalletControllerTest {
     @MockitoBean
     private lateinit var userRepository: UserRepository
     
-    @MockitoBean
-    private lateinit var jwtUtil: JwtUtil
-
-    private lateinit var mockMvc: MockMvc
-    private lateinit var objectMapper: ObjectMapper
     private var mockJwtToken: String = "mock-jwt-token"
     private val userId = UUID.randomUUID()
     private val walletId = UUID.randomUUID()
@@ -68,21 +61,6 @@ class WalletControllerTest {
 
     @BeforeEach
     fun setup() {
-        mockMvc = MockMvcBuilders
-            .webAppContextSetup(webApplicationContext)
-            .build()
-        objectMapper = ObjectMapper().apply {
-            registerModule(com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
-            configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-        }
-        
-        // Setup security context mock
-        val authentication = org.mockito.Mockito.mock(Authentication::class.java)
-        val securityContext = org.mockito.Mockito.mock(SecurityContext::class.java)
-        whenever(securityContext.authentication).thenReturn(authentication)
-        whenever(authentication.name).thenReturn("testuser")
-        SecurityContextHolder.setContext(securityContext)
-        
         // Mock user repository response
         whenever(userRepository.findByUsername("testuser")).thenReturn(testUser)
         

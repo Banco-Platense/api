@@ -26,9 +26,13 @@ class TestSecurityConfig {
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
+            .sessionManagement { session ->
+                session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS)
+            }
             .authorizeHttpRequests { authorize ->
                 authorize.anyRequest().permitAll()
             }
+            // Don't add any custom filters in test configuration
             
         return http.build()
     }
