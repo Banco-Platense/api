@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
+import java.util.UUID
 
 @ExtendWith(SpringExtension::class)
 @WebMvcTest(WalletController::class)
@@ -54,10 +55,12 @@ class WalletControllerTest {
     private lateinit var mockMvc: MockMvc
     private lateinit var objectMapper: ObjectMapper
     private var mockJwtToken: String = "mock-jwt-token"
-    private val testUser = User(id = 1L, username = "testuser", email = "test@example.com", passwordHash = "hashedpw", drinks = com.banco_platense.api.entity.Drink.COFFEE)
+    private val userId = UUID.randomUUID()
+    private val walletId = UUID.randomUUID()
+    private val testUser = User(id = userId, username = "testuser", email = "test@example.com", passwordHash = "hashedpw", drinks = com.banco_platense.api.entity.Drink.COFFEE)
     private val testWallet = WalletResponseDto(
-        id = 1L,
-        userId = 1L,
+        id = walletId,
+        userId = userId,
         balance = 100.0,
         createdAt = LocalDateTime.now(),
         updatedAt = LocalDateTime.now()
@@ -91,9 +94,8 @@ class WalletControllerTest {
     @Test
     fun `should get wallet by user id`() {
         // Given
-        val userId = 1L
         val wallet = WalletResponseDto(
-            id = 1L,
+            id = walletId,
             userId = userId,
             balance = 100.0,
             createdAt = LocalDateTime.now(),
@@ -106,8 +108,8 @@ class WalletControllerTest {
         mockMvc.perform(get("/api/v1/wallets/user/$userId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.id").value(testWallet.id))
-            .andExpect(jsonPath("$.userId").value(testWallet.userId))
+            .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
+            .andExpect(jsonPath("$.userId").value(testWallet.userId.toString()))
             .andExpect(jsonPath("$.balance").value(testWallet.balance))
     }
 
@@ -115,13 +117,13 @@ class WalletControllerTest {
     @WithMockUser(username = "testuser")
     fun `should not be able to get other people's wallets`() {
         // Given
-        val userId = 999L
+        val otherUserId = UUID.randomUUID()
 
-        whenever(walletService.getWalletByUserId(userId))
-            .thenThrow(NoSuchElementException("Wallet not found for user ID: $userId"))
+        whenever(walletService.getWalletByUserId(otherUserId))
+            .thenThrow(NoSuchElementException("Wallet not found for user ID: $otherUserId"))
 
         // When and Then
-        mockMvc.perform(get("/api/v1/wallets/user/$userId")
+        mockMvc.perform(get("/api/v1/wallets/user/$otherUserId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isForbidden)
     }
@@ -138,8 +140,9 @@ class WalletControllerTest {
             externalWalletInfo = "Bank Account 123456"
         )
 
+        val transactionId = UUID.randomUUID()
         val transactionResponse = TransactionResponseDto(
-            id = 1L,
+            id = transactionId,
             type = TransactionType.EXTERNAL_TOPUP,
             amount = 50.0,
             timestamp = LocalDateTime.now(),
@@ -149,7 +152,7 @@ class WalletControllerTest {
             externalWalletInfo = "Bank Account 123456"
         )
 
-        whenever(walletService.createTransaction(testWallet.id, createTransactionDto))
+        whenever(walletService.createTransaction(testWallet.id!!, createTransactionDto))
             .thenReturn(transactionResponse)
 
         // When and then
@@ -160,7 +163,7 @@ class WalletControllerTest {
                 .header("Authorization", "Bearer $mockJwtToken")
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.id").value(transactionResponse.id))
+            .andExpect(jsonPath("$.id").value(transactionResponse.id.toString()))
             .andExpect(jsonPath("$.type").value(transactionResponse.type.toString()))
             .andExpect(jsonPath("$.amount").value(transactionResponse.amount))
             .andExpect(jsonPath("$.description").value(transactionResponse.description))
@@ -170,9 +173,12 @@ class WalletControllerTest {
     @WithMockUser(username = "testuser")
     fun `should return all transactions for my wallet`() {
         // Given
+        val transaction1Id = UUID.randomUUID()
+        val transaction2Id = UUID.randomUUID()
+        
         val transactions = listOf(
             TransactionResponseDto(
-                id = 1L,
+                id = transaction1Id,
                 type = TransactionType.EXTERNAL_TOPUP,
                 amount = 100.0,
                 timestamp = LocalDateTime.now(),
@@ -182,7 +188,7 @@ class WalletControllerTest {
                 externalWalletInfo = "Bank Account"
             ),
             TransactionResponseDto(
-                id = 2L,
+                id = transaction2Id,
                 type = TransactionType.EXTERNAL_DEBIT,
                 amount = 25.0,
                 timestamp = LocalDateTime.now(),
@@ -193,16 +199,16 @@ class WalletControllerTest {
             )
         )
 
-        whenever(walletService.getTransactionsByWalletId(testWallet.id)).thenReturn(transactions)
+        whenever(walletService.getTransactionsByWalletId(testWallet.id!!)).thenReturn(transactions)
 
         // When and then
         mockMvc.perform(get("/api/v1/wallets/${testWallet.id}/transactions")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].id").value(transactions[0].id))
+            .andExpect(jsonPath("$[0].id").value(transactions[0].id.toString()))
             .andExpect(jsonPath("$[0].type").value(transactions[0].type.toString()))
             .andExpect(jsonPath("$[0].amount").value(transactions[0].amount))
-            .andExpect(jsonPath("$[1].id").value(transactions[1].id))
+            .andExpect(jsonPath("$[1].id").value(transactions[1].id.toString()))
             .andExpect(jsonPath("$[1].type").value(transactions[1].type.toString()))
             .andExpect(jsonPath("$[1].amount").value(transactions[1].amount))
     }
@@ -211,12 +217,11 @@ class WalletControllerTest {
     @WithMockUser(username = "testuser")
     fun `should forbid access to other user's wallet`() {
         // Given
-        val otherUserId = 2L
+        val otherUserId = UUID.randomUUID()
 
         // When and Then
         mockMvc.perform(get("/api/v1/wallets/user/$otherUserId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isForbidden)
     }
-    
 }
