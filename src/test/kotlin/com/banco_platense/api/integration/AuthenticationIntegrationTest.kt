@@ -5,7 +5,6 @@ import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
 import com.banco_platense.api.dto.LoginRequest
 import com.banco_platense.api.dto.RegistrationRequest
-import com.banco_platense.api.entity.User
 import com.banco_platense.api.repository.UserRepository
 import com.banco_platense.api.repository.WalletRepository
 import com.fasterxml.jackson.databind.ObjectMapper

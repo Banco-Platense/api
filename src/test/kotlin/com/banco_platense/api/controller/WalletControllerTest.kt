@@ -47,18 +47,6 @@ class WalletControllerTest {
     @MockitoBean
     private lateinit var userRepository: UserRepository
     
-    @MockitoBean
-    private lateinit var jwtUtil: JwtUtil
-
-    @MockitoBean
-    private lateinit var userDetailsService: org.springframework.security.core.userdetails.UserDetailsService
-
-    @MockitoBean
-    private lateinit var authenticationManager: org.springframework.security.authentication.AuthenticationManager
-
-    @MockitoBean
-    private lateinit var jwtAuthenticationEntryPoint: com.banco_platense.api.config.JwtAuthenticationEntryPoint
-
     private var mockJwtToken: String = "mock-jwt-token"
     private val userId = UUID.randomUUID()
     private val walletId = UUID.randomUUID()
