@@ -2,22 +2,34 @@ package com.banco_platense.api.controller
 
 import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.service.WalletService
+import com.banco_platense.api.repository.UserRepository
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/v1/wallets")
-class WalletController(private val walletService: WalletService) {
+class WalletController(
+    private val walletService: WalletService,
+    private val userRepository: UserRepository,
+) {
 
     @GetMapping("/user/{userId}")
     fun getWalletByUserId(@PathVariable userId: Long): ResponseEntity<Any> {
-        return try {
-            val wallet = walletService.getWalletByUserId(userId)
-            ResponseEntity.ok(wallet)
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
+        val currentUsername = getCurrentUsername()
+        val currentUser = userRepository.findByUsername(currentUsername)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+
+        // Ensure the user is only accessing their own wallet
+        if (currentUser.id != userId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "You can only access your own wallet"))
         }
+
+        val wallet = walletService.getWalletByUserId(userId)
+        return ResponseEntity.ok(wallet)
     }
 
     @PostMapping("/{walletId}/transactions")
@@ -25,23 +37,40 @@ class WalletController(private val walletService: WalletService) {
         @PathVariable walletId: Long,
         @RequestBody createTransactionDto: CreateTransactionDto
     ): ResponseEntity<Any> {
-        return try {
-            val transaction = walletService.createTransaction(walletId, createTransactionDto)
-            ResponseEntity.ok(transaction)
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.message)
+        val username = getCurrentUsername()
+        val user = userRepository.findByUsername(username)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+        
+        // Verify that the wallet belongs to the authenticated user
+        val userWallet = walletService.getWalletByUserId(user.id!!)
+        if (userWallet.id != walletId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "You can only create transactions for your own wallet"))
         }
+        
+        val transaction = walletService.createTransaction(walletId, createTransactionDto)
+        return ResponseEntity.ok(transaction)
     }
 
     @GetMapping("/{walletId}/transactions")
     fun getTransactionsByWalletId(@PathVariable walletId: Long): ResponseEntity<Any> {
-        return try {
-            val transactions = walletService.getTransactionsByWalletId(walletId)
-            ResponseEntity.ok(transactions)
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
+        val currentUsername = getCurrentUsername()
+        val currentUser = userRepository.findByUsername(currentUsername)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+        
+        // Ensure the user is only accessing their own wallet's transactions
+        val userWallet = walletService.getWalletByUserId(currentUser.id!!)
+        if (userWallet.id != walletId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "You can only access transactions from your own wallet"))
         }
+        
+        val transactions = walletService.getTransactionsByWalletId(walletId)
+        return ResponseEntity.ok(transactions)
+    }
+    
+    private fun getCurrentUsername(): String {
+        val authentication: Authentication = SecurityContextHolder.getContext().authentication
+        return authentication.name
     }
 } 

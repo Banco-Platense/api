@@ -55,6 +55,7 @@ class SecurityConfig(
             .authorizeHttpRequests { authorize ->
                 authorize
                     .requestMatchers("/auth/register", "/auth/login", "/error", "/health").permitAll()
+                    .requestMatchers("/api/v1/wallets/**").authenticated()
                     .anyRequest().authenticated()
             }
             .authenticationProvider(authenticationProvider())

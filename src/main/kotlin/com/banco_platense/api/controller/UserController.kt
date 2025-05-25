@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
 
 @RestController
 @RequestMapping("/auth")
@@ -39,28 +38,19 @@ class UserController(
 
     @PostMapping("/login")
     fun login(@RequestBody loginRequest: LoginRequest): ResponseEntity<Any> {
-        try {
-            logger.info("Login attempt for user: {}", loginRequest.username)
-            authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken(
-                    loginRequest.username,
-                    loginRequest.password
-                )
+        logger.info("Login attempt for user: {}", loginRequest.username)
+        
+        authenticationManager.authenticate(
+            UsernamePasswordAuthenticationToken(
+                loginRequest.username,
+                loginRequest.password
             )
-            
-            val userDetails = userDetailsService.loadUserByUsername(loginRequest.username)
-            val token = jwtUtil.generateToken(userDetails)
-            logger.info("Login successful for user: {}", loginRequest.username)
-            
-            return ResponseEntity.ok(LoginResponse(token, loginRequest.username))
-        } catch (e: Exception) {
-            logger.error("Login error for user {}: {} - {}", loginRequest.username, e.javaClass.name, e.message)
-            val errorResponse = mapOf(
-                "error" to "Authentication failed",
-                "message" to (e.message ?: "Unknown error"),
-                "type" to e.javaClass.simpleName
-            )
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse)
-        }
+        )
+        
+        val userDetails = userDetailsService.loadUserByUsername(loginRequest.username)
+        val token = jwtUtil.generateToken(userDetails)
+        logger.info("Login successful for user: {}", loginRequest.username)
+        
+        return ResponseEntity.ok(LoginResponse(token, loginRequest.username))
     }
 }
