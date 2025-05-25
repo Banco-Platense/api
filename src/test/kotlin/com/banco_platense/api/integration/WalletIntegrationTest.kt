@@ -35,6 +35,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
+import java.util.UUID
 
 @SpringBootTest(
     classes = [
@@ -135,8 +136,8 @@ class WalletIntegrationTest {
         // When & then
         mockMvc.perform(get("/api/v1/wallets/user/${testWallet.userId}"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.id").value(testWallet.id))
-            .andExpect(jsonPath("$.userId").value(testWallet.userId))
+            .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
+            .andExpect(jsonPath("$.userId").value(testWallet.userId.toString()))
             .andExpect(jsonPath("$.balance").value(testWallet.balance))
     }
 
@@ -163,14 +164,14 @@ class WalletIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_TOPUP.toString()))
             .andExpect(jsonPath("$.amount").value(topupAmount))
-            .andExpect(jsonPath("$.receiverWalletId").value(testWallet.id))
+            .andExpect(jsonPath("$.receiverWalletId").value(testWallet.id.toString()))
 
         // Then
-        val updatedWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
         assertEquals(initialBalance + topupAmount, updatedWallet.balance)
         
         // Verify transaction was saved
-        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id)
+        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_TOPUP, transactions[0].type)
         assertEquals(topupAmount, transactions[0].amount)
@@ -199,14 +200,14 @@ class WalletIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIT.toString()))
             .andExpect(jsonPath("$.amount").value(debitAmount))
-            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id))
+            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
 
         // Then
-        val updatedWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
         assertEquals(initialBalance - debitAmount, updatedWallet.balance)
         
         // Verify
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id)
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
         assertEquals(debitAmount, transactions[0].amount)
@@ -236,17 +237,17 @@ class WalletIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.type").value(TransactionType.P2P.toString()))
             .andExpect(jsonPath("$.amount").value(transferAmount))
-            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id))
-            .andExpect(jsonPath("$.receiverWalletId").value(otherWallet.id))
+            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
+            .andExpect(jsonPath("$.receiverWalletId").value(otherWallet.id.toString()))
 
         // Then
-        val updatedSenderWallet = walletRepository.findById(testWallet.id).orElseThrow()
-        val updatedReceiverWallet = walletRepository.findById(otherWallet.id).orElseThrow()
+        val updatedSenderWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
+        val updatedReceiverWallet = walletRepository.findById(otherWallet.id!!).orElseThrow()
         assertEquals(initialSenderBalance - transferAmount, updatedSenderWallet.balance)
         assertEquals(initialReceiverBalance + transferAmount, updatedReceiverWallet.balance)
         
         // Verify transaction was saved
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id)
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.P2P, transactions[0].type)
         assertEquals(transferAmount, transactions[0].amount)
@@ -283,10 +284,22 @@ class WalletIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
-            .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.id.toInt(), receivedTransaction.id.toInt())))
-            .andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.type.toString(), receivedTransaction.type.toString())))
-            .andExpect(jsonPath("$[*].amount").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.amount, receivedTransaction.amount)))
-            .andExpect(jsonPath("$[*].description").value(org.hamcrest.Matchers.containsInAnyOrder(sentTransaction.description, receivedTransaction.description)))
+            .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.containsInAnyOrder(
+                sentTransaction.id.toString(), 
+                receivedTransaction.id.toString()
+            )))
+            .andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.containsInAnyOrder(
+                sentTransaction.type.toString(), 
+                receivedTransaction.type.toString()
+            )))
+            .andExpect(jsonPath("$[*].amount").value(org.hamcrest.Matchers.containsInAnyOrder(
+                sentTransaction.amount, 
+                receivedTransaction.amount
+            )))
+            .andExpect(jsonPath("$[*].description").value(org.hamcrest.Matchers.containsInAnyOrder(
+                sentTransaction.description, 
+                receivedTransaction.description
+            )))
     }
     
     @Test

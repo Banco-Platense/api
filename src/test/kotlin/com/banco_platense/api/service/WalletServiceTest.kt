@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.util.UUID
 
 @SpringBootTest(
     classes = [
@@ -49,7 +50,7 @@ class WalletServiceTest {
         
         testWallet = walletRepository.save(
             Wallet(
-                userId = 1L,
+                userId = UUID.randomUUID(),
                 balance = 100.0,
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now()
@@ -58,7 +59,7 @@ class WalletServiceTest {
         
         recipientWallet = walletRepository.save(
             Wallet(
-                userId = 2L,
+                userId = UUID.randomUUID(),
                 balance = 50.0,
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now()
@@ -69,7 +70,7 @@ class WalletServiceTest {
     @Test
     fun `should create wallet for user`() {
         // Given
-        val userId = 3L
+        val userId = UUID.randomUUID()
         
         // When
         val result = walletService.createWallet(userId)
@@ -99,7 +100,7 @@ class WalletServiceTest {
     @Test
     fun `should throw exception when wallet not found by user id`() {
         // Given
-        val nonExistentUserId = 999L
+        val nonExistentUserId = UUID.randomUUID()
         
         // When & Then
         val exception = assertThrows(NoSuchElementException::class.java) {
@@ -123,7 +124,7 @@ class WalletServiceTest {
         )
         
         // When
-        val result = walletService.createTransaction(testWallet.id, createDto)
+        val result = walletService.createTransaction(testWallet.id!!, createDto)
         
         // Then
         assertNotNull(result.id)
@@ -133,11 +134,11 @@ class WalletServiceTest {
         assertEquals(testWallet.id, result.receiverWalletId)
         
         // Verify balance was updated
-        val updatedWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
         assertEquals(initialBalance + topupAmount, updatedWallet.balance)
         
         // Verify transaction was saved
-        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id)
+        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_TOPUP, transactions[0].type)
         assertEquals(topupAmount, transactions[0].amount)
@@ -157,7 +158,7 @@ class WalletServiceTest {
         )
         
         // When
-        val result = walletService.createTransaction(testWallet.id, createDto)
+        val result = walletService.createTransaction(testWallet.id!!, createDto)
         
         // Then
         assertNotNull(result.id)
@@ -167,11 +168,11 @@ class WalletServiceTest {
         assertEquals(testWallet.id, result.senderWalletId)
         
         // Verify balance was updated
-        val updatedWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
         assertEquals(initialBalance - debitAmount, updatedWallet.balance)
         
         // Verify transaction was saved
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id)
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
         assertEquals(debitAmount, transactions[0].amount)
@@ -192,7 +193,7 @@ class WalletServiceTest {
         )
         
         // When
-        val result = walletService.createTransaction(testWallet.id, createDto)
+        val result = walletService.createTransaction(testWallet.id!!, createDto)
         
         // Then
         assertNotNull(result.id)
@@ -203,15 +204,15 @@ class WalletServiceTest {
         assertEquals(recipientWallet.id, result.receiverWalletId)
         
         // Verify sender balance was updated
-        val updatedSenderWallet = walletRepository.findById(testWallet.id).orElseThrow()
+        val updatedSenderWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
         assertEquals(initialSenderBalance - transferAmount, updatedSenderWallet.balance)
         
         // Verify receiver balance was updated
-        val updatedReceiverWallet = walletRepository.findById(recipientWallet.id).orElseThrow()
+        val updatedReceiverWallet = walletRepository.findById(recipientWallet.id!!).orElseThrow()
         assertEquals(initialReceiverBalance + transferAmount, updatedReceiverWallet.balance)
         
         // Verify transaction was saved
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id)
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.P2P, transactions[0].type)
         assertEquals(transferAmount, transactions[0].amount)
@@ -231,7 +232,7 @@ class WalletServiceTest {
         
         // When & Then
         val exception = assertThrows(IllegalArgumentException::class.java) {
-            walletService.createTransaction(testWallet.id, createDto)
+            walletService.createTransaction(testWallet.id!!, createDto)
         }
         
         assertTrue(exception.message?.contains("Insufficient funds") == true)
@@ -249,7 +250,7 @@ class WalletServiceTest {
         
         // When & Then
         val exception = assertThrows(IllegalArgumentException::class.java) {
-            walletService.createTransaction(testWallet.id, createDto)
+            walletService.createTransaction(testWallet.id!!, createDto)
         }
         
         assertTrue(exception.message?.contains("Cannot send money to yourself") == true)
@@ -281,7 +282,7 @@ class WalletServiceTest {
         )
         
         // When
-        val result = walletService.getTransactionsByWalletId(testWallet.id)
+        val result = walletService.getTransactionsByWalletId(testWallet.id!!)
         
         // Then
         assertEquals(2, result.size)

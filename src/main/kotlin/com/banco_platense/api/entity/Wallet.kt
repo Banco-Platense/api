@@ -1,17 +1,20 @@
 package com.banco_platense.api.entity
 
 import jakarta.persistence.*
+import org.hibernate.annotations.GenericGenerator
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity
 @Table(name = "wallets")
 data class Wallet(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    val id: UUID? = null,
 
     @Column(name = "user_id", nullable = false)
-    val userId: Long,
+    val userId: UUID,
 
     @Column(nullable = false)
     var balance: Double = 0.0,

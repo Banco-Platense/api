@@ -11,6 +11,7 @@ import com.banco_platense.api.repository.WalletRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Service
 class WalletService(
@@ -19,7 +20,7 @@ class WalletService(
 ) {
 
     @Transactional
-    fun createWallet(userId: Long): WalletResponseDto {
+    fun createWallet(userId: UUID): WalletResponseDto {
         val wallet = Wallet(
             userId = userId,
             balance = 0.0,
@@ -31,14 +32,14 @@ class WalletService(
     }
 
     @Transactional(readOnly = true)
-    fun getWalletByUserId(userId: Long): WalletResponseDto {
+    fun getWalletByUserId(userId: UUID): WalletResponseDto {
         val wallet = walletRepository.findByUserId(userId)
             ?: throw NoSuchElementException("Wallet not found for user ID: $userId")
         return mapToWalletResponseDto(wallet)
     }
 
     @Transactional
-    fun createTransaction(walletId: Long, createDto: CreateTransactionDto): TransactionResponseDto {
+    fun createTransaction(walletId: UUID, createDto: CreateTransactionDto): TransactionResponseDto {
         val wallet = walletRepository.findById(walletId)
             .orElseThrow { NoSuchElementException("Wallet not found with ID: $walletId") }
 
@@ -83,7 +84,7 @@ class WalletService(
     }
 
     @Transactional(readOnly = true)
-    fun getTransactionsByWalletId(walletId: Long): List<TransactionResponseDto> {
+    fun getTransactionsByWalletId(walletId: UUID): List<TransactionResponseDto> {
         walletRepository.findById(walletId)
             .orElseThrow { NoSuchElementException("Wallet not found with ID: $walletId") }
 

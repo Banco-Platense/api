@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/wallets")
@@ -17,7 +18,7 @@ class WalletController(
 ) {
 
     @GetMapping("/user/{userId}")
-    fun getWalletByUserId(@PathVariable userId: Long): ResponseEntity<Any> {
+    fun getWalletByUserId(@PathVariable userId: UUID): ResponseEntity<Any> {
         val currentUsername = getCurrentUsername()
         val currentUser = userRepository.findByUsername(currentUsername)
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
@@ -34,7 +35,7 @@ class WalletController(
 
     @PostMapping("/{walletId}/transactions")
     fun createTransaction(
-        @PathVariable walletId: Long,
+        @PathVariable walletId: UUID,
         @RequestBody createTransactionDto: CreateTransactionDto
     ): ResponseEntity<Any> {
         val username = getCurrentUsername()
@@ -53,7 +54,7 @@ class WalletController(
     }
 
     @GetMapping("/{walletId}/transactions")
-    fun getTransactionsByWalletId(@PathVariable walletId: Long): ResponseEntity<Any> {
+    fun getTransactionsByWalletId(@PathVariable walletId: UUID): ResponseEntity<Any> {
         val currentUsername = getCurrentUsername()
         val currentUser = userRepository.findByUsername(currentUsername)
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
