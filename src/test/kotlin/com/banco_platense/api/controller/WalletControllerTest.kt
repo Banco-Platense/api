@@ -83,7 +83,7 @@ class WalletControllerTest {
         whenever(walletService.getWalletByUserId(userId)).thenReturn(wallet)
 
         // When and then
-        mockMvc.perform(get("/api/v1/wallets/user/$userId")
+        mockMvc.perform(get("/wallets/user/$userId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
@@ -101,7 +101,7 @@ class WalletControllerTest {
             .thenThrow(NoSuchElementException("Wallet not found for user ID: $otherUserId"))
 
         // When and Then
-        mockMvc.perform(get("/api/v1/wallets/user/$otherUserId")
+        mockMvc.perform(get("/wallets/user/$otherUserId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isForbidden)
     }
@@ -135,7 +135,7 @@ class WalletControllerTest {
 
         // When and then
         mockMvc.perform(
-            post("/api/v1/wallets/${testWallet.id}/transactions")
+            post("/wallets/${testWallet.id}/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTransactionDto))
                 .header("Authorization", "Bearer $mockJwtToken")
@@ -180,7 +180,7 @@ class WalletControllerTest {
         whenever(walletService.getTransactionsByWalletId(testWallet.id!!)).thenReturn(transactions)
 
         // When and then
-        mockMvc.perform(get("/api/v1/wallets/${testWallet.id}/transactions")
+        mockMvc.perform(get("/wallets/${testWallet.id}/transactions")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].id").value(transactions[0].id.toString()))
@@ -198,7 +198,7 @@ class WalletControllerTest {
         val otherUserId = UUID.randomUUID()
 
         // When and Then
-        mockMvc.perform(get("/api/v1/wallets/user/$otherUserId")
+        mockMvc.perform(get("/wallets/user/$otherUserId")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isForbidden)
     }

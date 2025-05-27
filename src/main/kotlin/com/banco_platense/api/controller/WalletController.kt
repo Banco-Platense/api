@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/v1/wallets")
+@RequestMapping("/wallets")
 class WalletController(
     private val walletService: WalletService,
     private val userRepository: UserRepository,
