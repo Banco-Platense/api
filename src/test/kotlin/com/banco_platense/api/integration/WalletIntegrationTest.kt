@@ -134,7 +134,7 @@ class WalletIntegrationTest {
     @WithMockUser(username = "testuser")
     fun `should get my wallet`() {
         // When & then
-        mockMvc.perform(get("/api/v1/wallets/user/${testWallet.userId}"))
+        mockMvc.perform(get("/wallets/user/${testWallet.userId}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
             .andExpect(jsonPath("$.userId").value(testWallet.userId.toString()))
@@ -157,7 +157,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/api/v1/wallets/${testWallet.id}/transactions")
+            post("/wallets/${testWallet.id}/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTransactionDto))
         )
@@ -193,7 +193,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/api/v1/wallets/${testWallet.id}/transactions")
+            post("/wallets/${testWallet.id}/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTransactionDto))
         )
@@ -230,7 +230,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/api/v1/wallets/${testWallet.id}/transactions")
+            post("/wallets/${testWallet.id}/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTransactionDto))
         )
@@ -280,7 +280,7 @@ class WalletIntegrationTest {
         )
 
         // When and then
-        mockMvc.perform(get("/api/v1/wallets/${testWallet.id}/transactions"))
+        mockMvc.perform(get("/wallets/${testWallet.id}/transactions"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
@@ -317,7 +317,7 @@ class WalletIntegrationTest {
 
         // When & then
         mockMvc.perform(
-            post("/api/v1/wallets/${testWallet.id}/transactions")
+            post("/wallets/${testWallet.id}/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createTransactionDto))
         )
