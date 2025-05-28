@@ -9,6 +9,10 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
+import com.banco_platense.api.dto.P2PTransactionRequestDto
+import com.banco_platense.api.dto.ExternalTopUpRequestDto
+import com.banco_platense.api.dto.ExternalDebitRequestDto
+import com.banco_platense.api.entity.TransactionType
 
 @RestController
 @RequestMapping("/wallets")
@@ -33,26 +37,6 @@ class WalletController(
         return ResponseEntity.ok(wallet)
     }
 
-    @PostMapping("/{walletId}/transactions")
-    fun createTransaction(
-        @PathVariable walletId: UUID,
-        @RequestBody createTransactionDto: CreateTransactionDto
-    ): ResponseEntity<Any> {
-        val username = getCurrentUsername()
-        val user = userRepository.findByUsername(username)
-            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
-        
-        // Verify that the wallet belongs to the authenticated user
-        val userWallet = walletService.getWalletByUserId(user.id!!)
-        if (userWallet.id != walletId) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(mapOf("error" to "You can only create transactions for your own wallet"))
-        }
-        
-        val transaction = walletService.createTransaction(walletId, createTransactionDto)
-        return ResponseEntity.ok(transaction)
-    }
-
     @GetMapping("/{walletId}/transactions")
     fun getTransactionsByWalletId(@PathVariable walletId: UUID): ResponseEntity<Any> {
         val currentUsername = getCurrentUsername()
@@ -68,6 +52,81 @@ class WalletController(
         
         val transactions = walletService.getTransactionsByWalletId(walletId)
         return ResponseEntity.ok(transactions)
+    }
+    
+    @PostMapping("/{walletId}/transactions/p2p")
+    fun createP2PTransaction(
+        @PathVariable walletId: UUID,
+        @RequestBody request: P2PTransactionRequestDto
+    ): ResponseEntity<Any> {
+        val username = getCurrentUsername()
+        val user = userRepository.findByUsername(username)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+
+        val userWallet = walletService.getWalletByUserId(user.id!!)
+        if (userWallet.id != walletId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "You can only create transactions for your own wallet"))
+        }
+
+        val createDto = CreateTransactionDto(
+            type = TransactionType.P2P,
+            amount = request.amount,
+            description = request.description,
+            receiverWalletId = request.receiverWalletId
+        )
+        val transaction = walletService.createTransaction(walletId, createDto)
+        return ResponseEntity.ok(transaction)
+    }
+
+    @PostMapping("/{walletId}/transactions/topup")
+    fun createTopUpTransaction(
+        @PathVariable walletId: UUID,
+        @RequestBody request: ExternalTopUpRequestDto
+    ): ResponseEntity<Any> {
+        val username = getCurrentUsername()
+        val user = userRepository.findByUsername(username)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+
+        val userWallet = walletService.getWalletByUserId(user.id!!)
+        if (userWallet.id != walletId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "You can only create transactions for your own wallet"))
+        }
+
+        val createDto = CreateTransactionDto(
+            type = TransactionType.EXTERNAL_TOPUP,
+            amount = request.amount,
+            description = request.description,
+            externalWalletInfo = request.externalWalletInfo
+        )
+        val transaction = walletService.createTransaction(walletId, createDto)
+        return ResponseEntity.ok(transaction)
+    }
+
+    @PostMapping("/{walletId}/transactions/debit")
+    fun createDebitTransaction(
+        @PathVariable walletId: UUID,
+        @RequestBody request: ExternalDebitRequestDto
+    ): ResponseEntity<Any> {
+        val username = getCurrentUsername()
+        val user = userRepository.findByUsername(username)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+
+        val userWallet = walletService.getWalletByUserId(user.id!!)
+        if (userWallet.id != walletId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "You can only create transactions for your own wallet"))
+        }
+
+        val createDto = CreateTransactionDto(
+            type = TransactionType.EXTERNAL_DEBIT,
+            amount = request.amount,
+            description = request.description,
+            externalWalletInfo = request.externalWalletInfo
+        )
+        val transaction = walletService.createTransaction(walletId, createDto)
+        return ResponseEntity.ok(transaction)
     }
     
     private fun getCurrentUsername(): String {

@@ -29,6 +29,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
 import java.util.UUID
+import com.banco_platense.api.dto.P2PTransactionRequestDto
+import com.banco_platense.api.dto.ExternalTopUpRequestDto
+import com.banco_platense.api.dto.ExternalDebitRequestDto
 
 @ExtendWith(SpringExtension::class)
 @WebMvcTest(controllers = [WalletController::class], excludeFilters = [org.springframework.context.annotation.ComponentScan.Filter(type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE, classes = [com.banco_platense.api.config.JwtAuthenticationFilter::class])])
@@ -108,43 +111,135 @@ class WalletControllerTest {
 
     @Test
     @WithMockUser(username = "testuser")
-    fun `should create transaction successfully`() {
+    fun `should create P2P transaction successfully`() {
         // Given
-        val createTransactionDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_TOPUP,
-            amount = 50.0,
-            description = "Top up from bank account",
-            receiverWalletId = null,
-            externalWalletInfo = "Bank Account 123456"
+        val requestDto = P2PTransactionRequestDto(
+            amount = 30.0,
+            description = "Money transfer to friend",
+            receiverWalletId = UUID.randomUUID()
         )
-
+        val expectedDto = CreateTransactionDto(
+            type = TransactionType.P2P,
+            amount = requestDto.amount,
+            description = requestDto.description,
+            receiverWalletId = requestDto.receiverWalletId
+        )
         val transactionId = UUID.randomUUID()
         val transactionResponse = TransactionResponseDto(
             id = transactionId,
-            type = TransactionType.EXTERNAL_TOPUP,
-            amount = 50.0,
+            type = TransactionType.P2P,
+            amount = requestDto.amount,
             timestamp = LocalDateTime.now(),
-            description = "Top up from bank account",
-            senderWalletId = null,
-            receiverWalletId = testWallet.id,
-            externalWalletInfo = "Bank Account 123456"
+            description = requestDto.description,
+            senderWalletId = testWallet.id,
+            receiverWalletId = requestDto.receiverWalletId,
+            externalWalletInfo = null
         )
 
-        whenever(walletService.createTransaction(testWallet.id!!, createTransactionDto))
+        whenever(walletService.createTransaction(testWallet.id!!, expectedDto))
             .thenReturn(transactionResponse)
 
-        // When and then
+        // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions")
+            post("/wallets/${testWallet.id}/transactions/p2p")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createTransactionDto))
+                .content(objectMapper.writeValueAsString(requestDto))
                 .header("Authorization", "Bearer $mockJwtToken")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(transactionResponse.id.toString()))
             .andExpect(jsonPath("$.type").value(transactionResponse.type.toString()))
             .andExpect(jsonPath("$.amount").value(transactionResponse.amount))
-            .andExpect(jsonPath("$.description").value(transactionResponse.description))
+            .andExpect(jsonPath("$.senderWalletId").value(transactionResponse.senderWalletId.toString()))
+            .andExpect(jsonPath("$.receiverWalletId").value(transactionResponse.receiverWalletId.toString()))
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    fun `should create external topup transaction successfully`() {
+        // Given
+        val requestDto = ExternalTopUpRequestDto(
+            amount = 50.0,
+            description = "Top up from bank account",
+            externalWalletInfo = "Bank Account 123456"
+        )
+        val expectedDto = CreateTransactionDto(
+            type = TransactionType.EXTERNAL_TOPUP,
+            amount = requestDto.amount,
+            description = requestDto.description,
+            externalWalletInfo = requestDto.externalWalletInfo
+        )
+        val transactionId = UUID.randomUUID()
+        val transactionResponse = TransactionResponseDto(
+            id = transactionId,
+            type = TransactionType.EXTERNAL_TOPUP,
+            amount = requestDto.amount,
+            timestamp = LocalDateTime.now(),
+            description = requestDto.description,
+            senderWalletId = null,
+            receiverWalletId = testWallet.id,
+            externalWalletInfo = requestDto.externalWalletInfo
+        )
+
+        whenever(walletService.createTransaction(testWallet.id!!, expectedDto))
+            .thenReturn(transactionResponse)
+
+        // When & then
+        mockMvc.perform(
+            post("/wallets/${testWallet.id}/transactions/topup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto))
+                .header("Authorization", "Bearer $mockJwtToken")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(transactionResponse.id.toString()))
+            .andExpect(jsonPath("$.type").value(transactionResponse.type.toString()))
+            .andExpect(jsonPath("$.amount").value(transactionResponse.amount))
+            .andExpect(jsonPath("$.receiverWalletId").value(transactionResponse.receiverWalletId.toString()))
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    fun `should create external debit transaction successfully`() {
+        // Given
+        val requestDto = ExternalDebitRequestDto(
+            amount = 40.0,
+            description = "Payment for services",
+            externalWalletInfo = "Merchant XYZ"
+        )
+        val expectedDto = CreateTransactionDto(
+            type = TransactionType.EXTERNAL_DEBIT,
+            amount = requestDto.amount,
+            description = requestDto.description,
+            externalWalletInfo = requestDto.externalWalletInfo
+        )
+        val transactionId = UUID.randomUUID()
+        val transactionResponse = TransactionResponseDto(
+            id = transactionId,
+            type = TransactionType.EXTERNAL_DEBIT,
+            amount = requestDto.amount,
+            timestamp = LocalDateTime.now(),
+            description = requestDto.description,
+            senderWalletId = testWallet.id,
+            receiverWalletId = null,
+            externalWalletInfo = requestDto.externalWalletInfo
+        )
+
+        whenever(walletService.createTransaction(testWallet.id!!, expectedDto))
+            .thenReturn(transactionResponse)
+
+        // When & then
+        mockMvc.perform(
+            post("/wallets/${testWallet.id}/transactions/debit")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto))
+                .header("Authorization", "Bearer $mockJwtToken")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(transactionResponse.id.toString()))
+            .andExpect(jsonPath("$.type").value(transactionResponse.type.toString()))
+            .andExpect(jsonPath("$.amount").value(transactionResponse.amount))
+            .andExpect(jsonPath("$.senderWalletId").value(transactionResponse.senderWalletId.toString()))
     }
 
     @Test
