@@ -230,7 +230,7 @@ class WalletControllerTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debit")
+            post("/wallets/${testWallet.id}/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
                 .header("Authorization", "Bearer $mockJwtToken")

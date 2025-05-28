@@ -194,7 +194,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debit")
+            post("/wallets/${testWallet.id}/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
@@ -316,7 +316,7 @@ class WalletIntegrationTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debit")
+            post("/wallets/${testWallet.id}/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )

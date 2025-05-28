@@ -104,8 +104,8 @@ class WalletController(
         return ResponseEntity.ok(transaction)
     }
 
-    @PostMapping("/{walletId}/transactions/debit")
-    fun createDebitTransaction(
+    @PostMapping("/{walletId}/transactions/debin")
+    fun createDebinTransaction(
         @PathVariable walletId: UUID,
         @RequestBody request: ExternalDebitRequestDto
     ): ResponseEntity<Any> {
