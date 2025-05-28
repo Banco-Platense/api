@@ -3,10 +3,9 @@ package com.banco_platense.api.integration
 import com.banco_platense.api.ApiApplication
 import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
-import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
-import com.banco_platense.api.dto.ExternalDebitRequestDto
+import com.banco_platense.api.dto.ExternalDebinRequestDto
 import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.Transaction
 import com.banco_platense.api.entity.TransactionType
@@ -38,7 +37,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
-import java.util.UUID
 
 @SpringBootTest(
     classes = [
@@ -186,7 +184,7 @@ class WalletIntegrationTest {
         val initialBalance = testWallet.balance
         val debitAmount = 30.0
         
-        val requestDto = ExternalDebitRequestDto(
+        val requestDto = ExternalDebinRequestDto(
             amount = debitAmount,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
@@ -308,7 +306,7 @@ class WalletIntegrationTest {
         // Given
         val excessiveAmount = 500.0
         
-        val requestDto = ExternalDebitRequestDto(
+        val requestDto = ExternalDebinRequestDto(
             amount = excessiveAmount,
             description = "Payment that should fail",
             externalWalletInfo = "Merchant XYZ"

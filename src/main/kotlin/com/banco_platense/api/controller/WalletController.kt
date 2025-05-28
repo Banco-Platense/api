@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.UUID
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
-import com.banco_platense.api.dto.ExternalDebitRequestDto
+import com.banco_platense.api.dto.ExternalDebinRequestDto
 import com.banco_platense.api.entity.TransactionType
 
 @RestController
@@ -107,7 +107,7 @@ class WalletController(
     @PostMapping("/{walletId}/transactions/debin")
     fun createDebinTransaction(
         @PathVariable walletId: UUID,
-        @RequestBody request: ExternalDebitRequestDto
+        @RequestBody request: ExternalDebinRequestDto
     ): ResponseEntity<Any> {
         val username = getCurrentUsername()
         val user = userRepository.findByUsername(username)

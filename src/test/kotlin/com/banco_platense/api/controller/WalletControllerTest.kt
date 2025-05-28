@@ -1,6 +1,5 @@
 package com.banco_platense.api.controller
 
-import com.banco_platense.api.config.JwtUtil
 import com.banco_platense.api.config.TestJacksonConfig
 import com.banco_platense.api.config.TestSecurityConfig
 import com.banco_platense.api.dto.CreateTransactionDto
@@ -31,7 +30,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
-import com.banco_platense.api.dto.ExternalDebitRequestDto
+import com.banco_platense.api.dto.ExternalDebinRequestDto
 
 @ExtendWith(SpringExtension::class)
 @WebMvcTest(controllers = [WalletController::class], excludeFilters = [org.springframework.context.annotation.ComponentScan.Filter(type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE, classes = [com.banco_platense.api.config.JwtAuthenticationFilter::class])])
@@ -202,7 +201,7 @@ class WalletControllerTest {
     @WithMockUser(username = "testuser")
     fun `should create external debit transaction successfully`() {
         // Given
-        val requestDto = ExternalDebitRequestDto(
+        val requestDto = ExternalDebinRequestDto(
             amount = 40.0,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
