@@ -197,7 +197,7 @@ class WalletIntegrationTest {
                 .content(objectMapper.writeValueAsString(requestDto))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIT.toString()))
+            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIN.toString()))
             .andExpect(jsonPath("$.amount").value(debitAmount))
             .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
 
@@ -208,7 +208,7 @@ class WalletIntegrationTest {
         // Verify
         val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
         assertEquals(debitAmount, transactions[0].amount)
     }
 
@@ -257,7 +257,7 @@ class WalletIntegrationTest {
         // Given
         val sentTransaction = transactionRepository.save(
             Transaction(
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 20.0,
                 description = "Sent payment",
                 senderWalletId = testWallet.id,

@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
-import java.util.UUID
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
 import com.banco_platense.api.dto.ExternalDebinRequestDto
@@ -95,7 +94,7 @@ class WalletController(
         val userWallet = walletService.getWalletByUserId(user.id!!)
 
         val createDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = request.amount,
             description = request.description,
             externalWalletInfo = request.externalWalletInfo
