@@ -21,19 +21,13 @@ class WalletController(
     private val userRepository: UserRepository,
 ) {
 
-    @GetMapping("/user/{userId}")
-    fun getWalletByUserId(@PathVariable userId: UUID): ResponseEntity<Any> {
+    @GetMapping("/user")
+    fun getWalletByUserId(): ResponseEntity<Any> {
         val currentUsername = getCurrentUsername()
         val currentUser = userRepository.findByUsername(currentUsername)
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
 
-        // Ensure the user is only accessing their own wallet
-        if (currentUser.id != userId) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(mapOf("error" to "You can only access your own wallet"))
-        }
-
-        val wallet = walletService.getWalletByUserId(userId)
+        val wallet = walletService.getWalletByUserId(currentUser.id!!)
         return ResponseEntity.ok(wallet)
     }
 

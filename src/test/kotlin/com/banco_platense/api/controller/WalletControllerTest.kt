@@ -85,27 +85,12 @@ class WalletControllerTest {
         whenever(walletService.getWalletByUserId(userId)).thenReturn(wallet)
 
         // When and then
-        mockMvc.perform(get("/wallets/user/$userId")
+        mockMvc.perform(get("/wallets/user")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
             .andExpect(jsonPath("$.userId").value(testWallet.userId.toString()))
             .andExpect(jsonPath("$.balance").value(testWallet.balance))
-    }
-
-    @Test
-    @WithMockUser(username = "testuser")
-    fun `should not be able to get other people's wallets`() {
-        // Given
-        val otherUserId = UUID.randomUUID()
-
-        whenever(walletService.getWalletByUserId(otherUserId))
-            .thenThrow(NoSuchElementException("Wallet not found for user ID: $otherUserId"))
-
-        // When and Then
-        mockMvc.perform(get("/wallets/user/$otherUserId")
-            .header("Authorization", "Bearer $mockJwtToken"))
-            .andExpect(status().isForbidden)
     }
 
     @Test
@@ -283,17 +268,5 @@ class WalletControllerTest {
             .andExpect(jsonPath("$[1].id").value(transactions[1].id.toString()))
             .andExpect(jsonPath("$[1].type").value(transactions[1].type.toString()))
             .andExpect(jsonPath("$[1].amount").value(transactions[1].amount))
-    }
-
-    @Test
-    @WithMockUser(username = "testuser")
-    fun `should forbid access to other user's wallet`() {
-        // Given
-        val otherUserId = UUID.randomUUID()
-
-        // When and Then
-        mockMvc.perform(get("/wallets/user/$otherUserId")
-            .header("Authorization", "Bearer $mockJwtToken"))
-            .andExpect(status().isForbidden)
     }
 }

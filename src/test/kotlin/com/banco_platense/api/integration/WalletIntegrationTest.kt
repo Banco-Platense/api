@@ -135,7 +135,7 @@ class WalletIntegrationTest {
     @WithMockUser(username = "testuser")
     fun `should get my wallet`() {
         // When & then
-        mockMvc.perform(get("/wallets/user/${testWallet.userId}"))
+        mockMvc.perform(get("/wallets/user"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
             .andExpect(jsonPath("$.userId").value(testWallet.userId.toString()))
