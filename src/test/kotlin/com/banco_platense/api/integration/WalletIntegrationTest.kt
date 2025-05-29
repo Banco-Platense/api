@@ -3,10 +3,9 @@ package com.banco_platense.api.integration
 import com.banco_platense.api.ApiApplication
 import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
-import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
-import com.banco_platense.api.dto.ExternalDebitRequestDto
+import com.banco_platense.api.dto.ExternalDebinRequestDto
 import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.Transaction
 import com.banco_platense.api.entity.TransactionType
@@ -38,7 +37,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
-import java.util.UUID
 
 @SpringBootTest(
     classes = [
@@ -137,7 +135,7 @@ class WalletIntegrationTest {
     @WithMockUser(username = "testuser")
     fun `should get my wallet`() {
         // When & then
-        mockMvc.perform(get("/wallets/user/${testWallet.userId}"))
+        mockMvc.perform(get("/wallets/user"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
             .andExpect(jsonPath("$.userId").value(testWallet.userId.toString()))
@@ -159,7 +157,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/topup")
+            post("/wallets/transactions/topup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
@@ -186,7 +184,7 @@ class WalletIntegrationTest {
         val initialBalance = testWallet.balance
         val debitAmount = 30.0
         
-        val requestDto = ExternalDebitRequestDto(
+        val requestDto = ExternalDebinRequestDto(
             amount = debitAmount,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
@@ -194,12 +192,12 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debin")
+            post("/wallets/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIT.toString()))
+            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIN.toString()))
             .andExpect(jsonPath("$.amount").value(debitAmount))
             .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
 
@@ -210,7 +208,7 @@ class WalletIntegrationTest {
         // Verify
         val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
         assertEquals(debitAmount, transactions[0].amount)
     }
 
@@ -230,7 +228,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/p2p")
+            post("/wallets/transactions/p2p")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
@@ -259,7 +257,7 @@ class WalletIntegrationTest {
         // Given
         val sentTransaction = transactionRepository.save(
             Transaction(
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 20.0,
                 description = "Sent payment",
                 senderWalletId = testWallet.id,
@@ -280,7 +278,7 @@ class WalletIntegrationTest {
         )
 
         // When and then
-        mockMvc.perform(get("/wallets/${testWallet.id}/transactions"))
+        mockMvc.perform(get("/wallets/transactions"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
@@ -308,7 +306,7 @@ class WalletIntegrationTest {
         // Given
         val excessiveAmount = 500.0
         
-        val requestDto = ExternalDebitRequestDto(
+        val requestDto = ExternalDebinRequestDto(
             amount = excessiveAmount,
             description = "Payment that should fail",
             externalWalletInfo = "Merchant XYZ"
@@ -316,7 +314,7 @@ class WalletIntegrationTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debin")
+            post("/wallets/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )

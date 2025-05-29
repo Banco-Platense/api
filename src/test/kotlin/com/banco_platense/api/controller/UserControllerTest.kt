@@ -4,6 +4,8 @@ import com.banco_platense.api.dto.LoginRequest
 import com.banco_platense.api.dto.RegistrationRequest
 import com.banco_platense.api.dto.RegistrationResult
 import com.banco_platense.api.service.UserService
+import com.banco_platense.api.entity.User as UserEntity
+import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.config.JwtUtil
 import com.banco_platense.api.config.TestJacksonConfig
 import com.banco_platense.api.config.TestSecurityConfig
@@ -69,6 +71,14 @@ class UserControllerTest {
         "testuser",
         "hashedpassword",
         listOf(SimpleGrantedAuthority("ROLE_USER"))
+    )
+
+    private val mockUserEntity = UserEntity(
+        id = UUID.randomUUID(),
+        email = "test@example.com",
+        username = "testuser",
+        passwordHash = "hashedpassword",
+        drinks = Drink.COFFEE
     )
 
     private val mockJwtToken = "mock.jwt.token"
@@ -165,6 +175,7 @@ class UserControllerTest {
         whenever(authenticationManager.authenticate(any())).thenReturn(mock())
         whenever(userDetailsService.loadUserByUsername(validLoginRequest.username)).thenReturn(mockUserDetails)
         whenever(jwtUtil.generateToken(mockUserDetails)).thenReturn(mockJwtToken)
+        whenever(userService.getUserByUsername(validLoginRequest.username)).thenReturn(mockUserEntity)
 
         // When & Then
         mockMvc.perform(
@@ -174,13 +185,14 @@ class UserControllerTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.token").value(mockJwtToken))
-            .andExpect(jsonPath("$.username").value(validLoginRequest.username))
+            .andExpect(jsonPath("$.user.username").value(validLoginRequest.username))
 
         verify(authenticationManager).authenticate(argThat<UsernamePasswordAuthenticationToken> { auth ->
             auth.principal == validLoginRequest.username && auth.credentials == validLoginRequest.password
         })
         verify(userDetailsService).loadUserByUsername(validLoginRequest.username)
         verify(jwtUtil).generateToken(mockUserDetails)
+        verify(userService).getUserByUsername(validLoginRequest.username)
     }
 
     @Test

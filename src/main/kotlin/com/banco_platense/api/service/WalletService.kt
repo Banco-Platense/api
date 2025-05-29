@@ -16,7 +16,8 @@ import java.util.UUID
 @Service
 class WalletService(
     private val walletRepository: WalletRepository,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val externalPaymentService: ExternalPaymentService
 ) {
 
     @Transactional
@@ -51,6 +52,13 @@ class WalletService(
 
         validateTransaction(wallet, createDto)
         
+        // Simulate external interaction for top-up or DEBIN and obtain an external transaction ID
+        val externalInfo = when (createDto.type) {
+            TransactionType.EXTERNAL_TOPUP -> externalPaymentService.simulateTopUp(createDto.amount, createDto.externalWalletInfo!!)
+            TransactionType.EXTERNAL_DEBIN -> externalPaymentService.simulateDebin(createDto.amount, createDto.externalWalletInfo!!)
+            else -> createDto.externalWalletInfo
+        }
+        
         val transaction = Transaction(
             type = createDto.type,
             amount = createDto.amount,
@@ -58,15 +66,15 @@ class WalletService(
             description = createDto.description,
             senderWalletId = when (createDto.type) {
                 TransactionType.P2P,
-                TransactionType.EXTERNAL_DEBIT -> walletId
+                TransactionType.EXTERNAL_DEBIN -> walletId
                 TransactionType.EXTERNAL_TOPUP -> null
             },
             receiverWalletId = when (createDto.type) {
                 TransactionType.P2P -> createDto.receiverWalletId
                 TransactionType.EXTERNAL_TOPUP -> walletId
-                TransactionType.EXTERNAL_DEBIT -> null
+                TransactionType.EXTERNAL_DEBIN -> null
             },
-            externalWalletInfo = createDto.externalWalletInfo
+            externalWalletInfo = externalInfo
         )
         
         val savedTransaction = transactionRepository.save(transaction)
@@ -108,7 +116,7 @@ class WalletService(
                 require(createDto.amount > 0) { "Amount must be positive for external topup" }
                 requireNotNull(createDto.externalWalletInfo) { "External wallet info is required for external topup" }
             }
-            TransactionType.EXTERNAL_DEBIT -> {
+            TransactionType.EXTERNAL_DEBIN -> {
                 require(createDto.amount > 0) { "Amount must be positive for external debit" }
                 require(wallet.balance >= createDto.amount) { "Insufficient funds" }
                 requireNotNull(createDto.externalWalletInfo) { "External wallet info is required for external debit" }
@@ -120,7 +128,7 @@ class WalletService(
         when (createDto.type) {
             TransactionType.P2P -> wallet.balance -= createDto.amount
             TransactionType.EXTERNAL_TOPUP -> wallet.balance += createDto.amount
-            TransactionType.EXTERNAL_DEBIT -> wallet.balance -= createDto.amount
+            TransactionType.EXTERNAL_DEBIN -> wallet.balance -= createDto.amount
         }
         wallet.updatedAt = LocalDateTime.now()
         walletRepository.save(wallet)

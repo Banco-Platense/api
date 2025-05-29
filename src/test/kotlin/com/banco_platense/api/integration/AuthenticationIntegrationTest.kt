@@ -110,7 +110,7 @@ class AuthenticationIntegrationTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.token").exists())
-            .andExpect(jsonPath("$.username").value(validLoginRequest.username))
+            .andExpect(jsonPath("$.user.username").value(validLoginRequest.username))
     }
 
     @Test
@@ -298,7 +298,7 @@ class AuthenticationIntegrationTest {
                 .content(objectMapper.writeValueAsString(LoginRequest("user1", "password1")))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value("user1"))
+            .andExpect(jsonPath("$.user.username").value("user1"))
 
         // Login as second user
         mockMvc.perform(
@@ -307,7 +307,7 @@ class AuthenticationIntegrationTest {
                 .content(objectMapper.writeValueAsString(LoginRequest("user2", "password2")))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value("user2"))
+            .andExpect(jsonPath("$.user.username").value("user2"))
 
         // Verify both users exist in database
         assertNotNull(userRepository.findByUsername("user1"))

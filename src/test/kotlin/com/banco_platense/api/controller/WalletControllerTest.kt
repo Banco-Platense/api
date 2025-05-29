@@ -1,6 +1,5 @@
 package com.banco_platense.api.controller
 
-import com.banco_platense.api.config.JwtUtil
 import com.banco_platense.api.config.TestJacksonConfig
 import com.banco_platense.api.config.TestSecurityConfig
 import com.banco_platense.api.dto.CreateTransactionDto
@@ -31,7 +30,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
-import com.banco_platense.api.dto.ExternalDebitRequestDto
+import com.banco_platense.api.dto.ExternalDebinRequestDto
 
 @ExtendWith(SpringExtension::class)
 @WebMvcTest(controllers = [WalletController::class], excludeFilters = [org.springframework.context.annotation.ComponentScan.Filter(type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE, classes = [com.banco_platense.api.config.JwtAuthenticationFilter::class])])
@@ -86,7 +85,7 @@ class WalletControllerTest {
         whenever(walletService.getWalletByUserId(userId)).thenReturn(wallet)
 
         // When and then
-        mockMvc.perform(get("/wallets/user/$userId")
+        mockMvc.perform(get("/wallets/user")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(testWallet.id.toString()))
@@ -96,23 +95,11 @@ class WalletControllerTest {
 
     @Test
     @WithMockUser(username = "testuser")
-    fun `should not be able to get other people's wallets`() {
-        // Given
-        val otherUserId = UUID.randomUUID()
-
-        whenever(walletService.getWalletByUserId(otherUserId))
-            .thenThrow(NoSuchElementException("Wallet not found for user ID: $otherUserId"))
-
-        // When and Then
-        mockMvc.perform(get("/wallets/user/$otherUserId")
-            .header("Authorization", "Bearer $mockJwtToken"))
-            .andExpect(status().isForbidden)
-    }
-
-    @Test
-    @WithMockUser(username = "testuser")
     fun `should create P2P transaction successfully`() {
         // Given
+        whenever(userRepository.findByUsername("testuser")).thenReturn(testUser)
+        whenever(walletService.getWalletByUserId(testUser.id!!)).thenReturn(testWallet)
+        
         val requestDto = P2PTransactionRequestDto(
             amount = 30.0,
             description = "Money transfer to friend",
@@ -141,7 +128,7 @@ class WalletControllerTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/p2p")
+            post("/wallets/transactions/p2p")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
                 .header("Authorization", "Bearer $mockJwtToken")
@@ -158,6 +145,9 @@ class WalletControllerTest {
     @WithMockUser(username = "testuser")
     fun `should create external topup transaction successfully`() {
         // Given
+        whenever(userRepository.findByUsername("testuser")).thenReturn(testUser)
+        whenever(walletService.getWalletByUserId(testUser.id!!)).thenReturn(testWallet)
+        
         val requestDto = ExternalTopUpRequestDto(
             amount = 50.0,
             description = "Top up from bank account",
@@ -186,7 +176,7 @@ class WalletControllerTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/topup")
+            post("/wallets/transactions/topup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
                 .header("Authorization", "Bearer $mockJwtToken")
@@ -202,13 +192,16 @@ class WalletControllerTest {
     @WithMockUser(username = "testuser")
     fun `should create external debit transaction successfully`() {
         // Given
-        val requestDto = ExternalDebitRequestDto(
+        whenever(userRepository.findByUsername("testuser")).thenReturn(testUser)
+        whenever(walletService.getWalletByUserId(testUser.id!!)).thenReturn(testWallet)
+        
+        val requestDto = ExternalDebinRequestDto(
             amount = 40.0,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
         )
         val expectedDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = requestDto.amount,
             description = requestDto.description,
             externalWalletInfo = requestDto.externalWalletInfo
@@ -216,7 +209,7 @@ class WalletControllerTest {
         val transactionId = UUID.randomUUID()
         val transactionResponse = TransactionResponseDto(
             id = transactionId,
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = requestDto.amount,
             timestamp = LocalDateTime.now(),
             description = requestDto.description,
@@ -230,7 +223,7 @@ class WalletControllerTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debin")
+            post("/wallets/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
                 .header("Authorization", "Bearer $mockJwtToken")
@@ -262,7 +255,7 @@ class WalletControllerTest {
             ),
             TransactionResponseDto(
                 id = transaction2Id,
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 25.0,
                 timestamp = LocalDateTime.now(),
                 description = "Payment for services",
@@ -275,7 +268,7 @@ class WalletControllerTest {
         whenever(walletService.getTransactionsByWalletId(testWallet.id!!)).thenReturn(transactions)
 
         // When and then
-        mockMvc.perform(get("/wallets/${testWallet.id}/transactions")
+        mockMvc.perform(get("/wallets/transactions")
             .header("Authorization", "Bearer $mockJwtToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].id").value(transactions[0].id.toString()))
@@ -284,17 +277,5 @@ class WalletControllerTest {
             .andExpect(jsonPath("$[1].id").value(transactions[1].id.toString()))
             .andExpect(jsonPath("$[1].type").value(transactions[1].type.toString()))
             .andExpect(jsonPath("$[1].amount").value(transactions[1].amount))
-    }
-
-    @Test
-    @WithMockUser(username = "testuser")
-    fun `should forbid access to other user's wallet`() {
-        // Given
-        val otherUserId = UUID.randomUUID()
-
-        // When and Then
-        mockMvc.perform(get("/wallets/user/$otherUserId")
-            .header("Authorization", "Bearer $mockJwtToken"))
-            .andExpect(status().isForbidden)
     }
 }

@@ -132,6 +132,8 @@ class WalletServiceTest {
         assertEquals(topupAmount, result.amount)
         assertEquals("Top up from bank account", result.description)
         assertEquals(testWallet.id, result.receiverWalletId)
+        assertNotNull(result.externalWalletInfo)
+        assertDoesNotThrow { UUID.fromString(result.externalWalletInfo) }
         
         // Verify balance was updated
         val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
@@ -141,6 +143,8 @@ class WalletServiceTest {
         val transactions = transactionRepository.findByReceiverWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_TOPUP, transactions[0].type)
+        assertNotNull(transactions[0].externalWalletInfo)
+        assertDoesNotThrow { UUID.fromString(transactions[0].externalWalletInfo) }
         assertEquals(topupAmount, transactions[0].amount)
     }
     
@@ -151,7 +155,7 @@ class WalletServiceTest {
         val debitAmount = 50.0
         
         val createDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = debitAmount,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
@@ -162,10 +166,12 @@ class WalletServiceTest {
         
         // Then
         assertNotNull(result.id)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, result.type)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, result.type)
         assertEquals(debitAmount, result.amount)
         assertEquals("Payment for services", result.description)
         assertEquals(testWallet.id, result.senderWalletId)
+        assertNotNull(result.externalWalletInfo)
+        assertDoesNotThrow { UUID.fromString(result.externalWalletInfo) }
         
         // Verify balance was updated
         val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
@@ -174,7 +180,9 @@ class WalletServiceTest {
         // Verify transaction was saved
         val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
+        assertNotNull(transactions[0].externalWalletInfo)
+        assertDoesNotThrow { UUID.fromString(transactions[0].externalWalletInfo) }
         assertEquals(debitAmount, transactions[0].amount)
     }
     
@@ -224,7 +232,7 @@ class WalletServiceTest {
         val excessiveAmount = 200.0
         
         val createDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = excessiveAmount,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
@@ -261,7 +269,7 @@ class WalletServiceTest {
         // Given
         transactionRepository.save(
             Transaction(
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 30.0,
                 description = "Payment for services",
                 senderWalletId = testWallet.id,
@@ -287,7 +295,7 @@ class WalletServiceTest {
         // Then
         assertEquals(2, result.size)
         
-        assertTrue(result.any { it.type == TransactionType.EXTERNAL_DEBIT })
+        assertTrue(result.any { it.type == TransactionType.EXTERNAL_DEBIN })
         assertTrue(result.any { it.type == TransactionType.EXTERNAL_TOPUP })
     }
 } 
