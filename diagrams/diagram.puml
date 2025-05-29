@@ -1,0 +1,35 @@
+@startuml
+entity User {
+  * id        : UUID <<PK>>
+  --
+  email       : VARCHAR(255) <<UQ>>
+  password    : VARCHAR(255>
+  created_at  : TIMESTAMP
+  updated_at  : TIMESTAMP
+}
+
+entity Wallet {
+  * id        : UUID <<PK>>
+  --
+  user_id     : UUID <<FK>>
+  balance     : DECIMAL(19,4)
+  created_at  : TIMESTAMP
+  updated_at  : TIMESTAMP
+}
+
+entity Transaction {
+  * id                   : UUID <<PK>>
+  --
+  type                  : ENUM('P2P', 'EXTERNAL_TOPUP', 'EXTERNAL_DEBIN')
+  amount                : DECIMAL(19,4)
+  timestamp             : TIMESTAMP
+  description           : VARCHAR(255)
+  sender_wallet_id      : UUID <<FK>> <<nullable>>
+  receiver_wallet_id    : UUID <<FK>> <<nullable>>
+  external_provider     : VARCHAR(100) <<nullable>>
+}
+
+User ||--o{ Wallet          : owns
+Wallet ||--o{ Transaction    : "as sender"\n(sender_wallet_id)
+Wallet ||--o{ Transaction    : "as receiver"\n(receiver_wallet_id)
+@enduml
