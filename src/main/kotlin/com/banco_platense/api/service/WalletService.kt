@@ -8,6 +8,7 @@ import com.banco_platense.api.entity.TransactionType
 import com.banco_platense.api.entity.Wallet
 import com.banco_platense.api.repository.TransactionRepository
 import com.banco_platense.api.repository.WalletRepository
+import com.banco_platense.api.service.ExternalPaymentService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -16,7 +17,8 @@ import java.util.UUID
 @Service
 class WalletService(
     private val walletRepository: WalletRepository,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val externalPaymentService: ExternalPaymentService
 ) {
 
     @Transactional
@@ -51,6 +53,13 @@ class WalletService(
 
         validateTransaction(wallet, createDto)
         
+        // Simulate external interaction for top-up or DEBIN and obtain an external transaction ID
+        val externalInfo = when (createDto.type) {
+            TransactionType.EXTERNAL_TOPUP -> externalPaymentService.simulateTopUp(createDto.amount, createDto.externalWalletInfo!!)
+            TransactionType.EXTERNAL_DEBIT -> externalPaymentService.simulateDebin(createDto.amount, createDto.externalWalletInfo!!)
+            else -> createDto.externalWalletInfo
+        }
+        
         val transaction = Transaction(
             type = createDto.type,
             amount = createDto.amount,
@@ -66,7 +75,7 @@ class WalletService(
                 TransactionType.EXTERNAL_TOPUP -> walletId
                 TransactionType.EXTERNAL_DEBIT -> null
             },
-            externalWalletInfo = createDto.externalWalletInfo
+            externalWalletInfo = externalInfo
         )
         
         val savedTransaction = transactionRepository.save(transaction)
