@@ -17,6 +17,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 import com.banco_platense.api.service.WalletService
 import org.springframework.context.annotation.Profile
+import com.banco_platense.api.dto.ExternalDebinRequestDto
 
 @Service
 @Profile("!test")
@@ -27,7 +28,7 @@ class DebinService(
 ) {
 
     @Transactional
-    fun createDebinRequest(walletId: UUID, requestDto: com.banco_platense.api.dto.ExternalDebitRequestDto): DebinRequestResponseDto {
+    fun createDebinRequest(walletId: UUID, requestDto: ExternalDebinRequestDto): DebinRequestResponseDto {
         val debinRequest = DebinRequest(
             walletId = walletId,
             amount = requestDto.amount,

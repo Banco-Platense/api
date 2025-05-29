@@ -44,7 +44,6 @@ class WalletController(
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
 
         val userWallet = walletService.getWalletByUserId(currentUser.id!!)
-
         val transactions = walletService.getTransactionsByWalletId(userWallet.id!!)
         return ResponseEntity.ok(transactions)
     }
@@ -58,14 +57,12 @@ class WalletController(
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
 
         val userWallet = walletService.getWalletByUserId(user.id!!)
-
         val createDto = CreateTransactionDto(
             type = TransactionType.P2P,
             amount = request.amount,
             description = request.description,
             receiverWalletId = request.receiverWalletId
         )
-
         val transaction = walletService.createTransaction(userWallet.id!!, createDto)
         return ResponseEntity.ok(transaction)
     }
@@ -79,7 +76,6 @@ class WalletController(
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
 
         val userWallet = walletService.getWalletByUserId(user.id!!)
-
         val createDto = CreateTransactionDto(
             type = TransactionType.EXTERNAL_TOPUP,
             amount = request.amount,
@@ -90,24 +86,24 @@ class WalletController(
         return ResponseEntity.ok(transaction)
     }
 
-    @PostMapping("/transactions/debin")
+    @PostMapping("/transactions/debin", "/{walletId}/transactions/debin")
     fun createDebinTransaction(
-        @PathVariable walletId: UUID,
-        @RequestBody request: ExternalDebitRequestDto
+        @PathVariable(required = false) walletId: UUID?,
+        @RequestBody request: ExternalDebinRequestDto
     ): ResponseEntity<Any> {
         val username = getCurrentUsername()
         val user = userRepository.findByUsername(username)
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
 
         val userWallet = walletService.getWalletByUserId(user.id!!)
-        if (userWallet.id != walletId) {
+        if (walletId != null && userWallet.id != walletId) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(mapOf("error" to "You can only create transactions for your own wallet"))
         }
-
+        val targetWalletId = walletId ?: userWallet.id!!
         // If DebinService is available (non-test), initiate Debin request; otherwise perform immediate debit
         return if (debinService != null) {
-            val debinResponse: DebinRequestResponseDto = debinService!!.createDebinRequest(walletId, request)
+            val debinResponse: DebinRequestResponseDto = debinService!!.createDebinRequest(targetWalletId, request)
             ResponseEntity.ok(debinResponse)
         } else {
             val createDto = CreateTransactionDto(
@@ -116,7 +112,7 @@ class WalletController(
                 description = request.description,
                 externalWalletInfo = request.externalWalletInfo
             )
-            val transaction = walletService.createTransaction(walletId, createDto)
+            val transaction = walletService.createTransaction(targetWalletId, createDto)
             ResponseEntity.ok(transaction)
         }
     }
