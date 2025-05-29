@@ -157,7 +157,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/topup")
+            post("/wallets/transactions/topup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
@@ -192,7 +192,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debin")
+            post("/wallets/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
@@ -228,7 +228,7 @@ class WalletIntegrationTest {
 
         // when
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/p2p")
+            post("/wallets/transactions/p2p")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )
@@ -278,7 +278,7 @@ class WalletIntegrationTest {
         )
 
         // When and then
-        mockMvc.perform(get("/wallets/${testWallet.id}/transactions"))
+        mockMvc.perform(get("/wallets/transactions"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
@@ -314,7 +314,7 @@ class WalletIntegrationTest {
 
         // When & then
         mockMvc.perform(
-            post("/wallets/${testWallet.id}/transactions/debin")
+            post("/wallets/transactions/debin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto))
         )

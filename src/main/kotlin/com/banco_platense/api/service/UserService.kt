@@ -8,6 +8,7 @@ import com.banco_platense.api.repository.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.*
 
 @Service
 class UserService(
@@ -43,5 +44,9 @@ class UserService(
         walletService.createWallet(saved.id!!)
         
         return RegistrationResult.Success(saved.id!!)
+    }
+
+    fun getUserByUsername(username: String): User {
+        return userRepository.findByUsername(username)!!
     }
 }

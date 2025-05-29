@@ -1,10 +1,7 @@
 package com.banco_platense.api.controller
 
 import com.banco_platense.api.config.JwtUtil
-import com.banco_platense.api.dto.LoginRequest
-import com.banco_platense.api.dto.LoginResponse
-import com.banco_platense.api.dto.RegistrationRequest
-import com.banco_platense.api.dto.RegistrationResult
+import com.banco_platense.api.dto.*
 import com.banco_platense.api.service.UserService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
@@ -50,7 +47,8 @@ class UserController(
         val userDetails = userDetailsService.loadUserByUsername(loginRequest.username)
         val token = jwtUtil.generateToken(userDetails)
         logger.info("Login successful for user: {}", loginRequest.username)
+        val user = userService.getUserByUsername(loginRequest.username)
         
-        return ResponseEntity.ok(LoginResponse(token, loginRequest.username))
+        return ResponseEntity.ok(LoginResponse(token, UserData(username = user.username, email = user.email, id = user.id!!)))
     }
 }
