@@ -19,5 +19,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  external-services-mock:
+    build:
+      context: ./external-services-mock
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+
 volumes:
   postgres_data:
