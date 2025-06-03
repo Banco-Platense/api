@@ -55,7 +55,8 @@ class SecurityConfig(
             .authorizeHttpRequests { authorize ->
                 authorize
                     .requestMatchers("/auth/register", "/auth/login", "/error", "/health").permitAll()
-                    .requestMatchers("/api/v1/wallets/**").authenticated()
+                    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                    .requestMatchers("/wallets/**").authenticated()
                     .anyRequest().authenticated()
             }
             .authenticationProvider(authenticationProvider())
