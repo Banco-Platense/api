@@ -183,7 +183,7 @@ class WalletIntegrationTest {
         // Given
         val initialBalance = testWallet.balance
         val debitAmount = 30.0
-        
+
         val requestDto = ExternalDebinRequestDto(
             amount = debitAmount,
             description = "Payment for services",
@@ -204,7 +204,7 @@ class WalletIntegrationTest {
         // Then
         val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
         assertEquals(initialBalance - debitAmount, updatedWallet.balance)
-        
+
         // Verify
         val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
@@ -305,7 +305,7 @@ class WalletIntegrationTest {
     fun `should reject transaction with insufficient funds`() {
         // Given
         val excessiveAmount = 500.0
-        
+
         val requestDto = ExternalDebinRequestDto(
             amount = excessiveAmount,
             description = "Payment that should fail",
