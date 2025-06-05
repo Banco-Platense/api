@@ -11,7 +11,7 @@ import java.util.UUID
 
 @Service
 class ExternalPaymentService(
-    @Value("${external.mock.url}") private val mockBaseUrl: String
+    @Value("\${external.service.url}") private val mockBaseUrl: String,
 ) {
     private val restTemplate = RestTemplate()
 
@@ -39,10 +39,8 @@ class ExternalPaymentService(
             val errorMsg = response.body?.message ?: "External DEBIN mock failed with status ${'$'}{response.statusCode}"
             throw RuntimeException(errorMsg)
         }
-        // On success, generate a transaction ID
-        val externalTransactionId = UUID.randomUUID().toString()
-        println("Simulated external DEBIN via mock: amount=${'$'}amount, source=${'$'}externalWalletInfo, externalTransactionId=${'$'}externalTransactionId")
-        return externalTransactionId
+        println("Simulated external DEBIN via mock: amount=${amount}amount, source=${externalWalletInfo}")
+        return externalWalletInfo
     }
 
     // DTOs for external mock interaction

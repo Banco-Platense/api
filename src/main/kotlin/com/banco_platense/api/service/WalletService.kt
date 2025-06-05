@@ -70,13 +70,13 @@ class WalletService(
             description = createDto.description,
             senderWalletId = when (createDto.type) {
                 TransactionType.P2P,
-                TransactionType.EXTERNAL_DEBIN -> walletId
+                TransactionType.EXTERNAL_DEBIN -> null
                 TransactionType.EXTERNAL_TOPUP -> null
             },
             receiverWalletId = when (createDto.type) {
                 TransactionType.P2P -> createDto.receiverWalletId
                 TransactionType.EXTERNAL_TOPUP -> walletId
-                TransactionType.EXTERNAL_DEBIN -> null
+                TransactionType.EXTERNAL_DEBIN -> walletId
             },
             externalWalletInfo = externalInfo
         )
@@ -131,7 +131,7 @@ class WalletService(
         when (createDto.type) {
             TransactionType.P2P -> wallet.balance -= createDto.amount
             TransactionType.EXTERNAL_TOPUP -> wallet.balance += createDto.amount
-            TransactionType.EXTERNAL_DEBIN -> wallet.balance -= createDto.amount
+            TransactionType.EXTERNAL_DEBIN -> wallet.balance += createDto.amount
         }
         wallet.updatedAt = LocalDateTime.now()
         walletRepository.save(wallet)
