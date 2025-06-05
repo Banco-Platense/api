@@ -58,8 +58,8 @@ class WalletService(
         
         // Simulate external interaction for top-up or DEBIN and obtain an external transaction ID
         val externalInfo = when (createDto.type) {
-            TransactionType.EXTERNAL_TOPUP -> externalPaymentService.simulateTopUp(createDto.amount, createDto.externalWalletInfo!!)
-            TransactionType.EXTERNAL_DEBIN -> externalPaymentService.simulateDebin(createDto.amount, createDto.externalWalletInfo!!)
+            TransactionType.EXTERNAL_TOPUP -> externalPaymentService.topUp(createDto.amount, createDto.externalWalletInfo!!)
+            TransactionType.EXTERNAL_DEBIN -> externalPaymentService.debin(createDto.amount, createDto.externalWalletInfo!!)
             else -> createDto.externalWalletInfo
         }
         

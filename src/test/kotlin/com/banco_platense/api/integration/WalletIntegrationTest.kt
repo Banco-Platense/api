@@ -177,40 +177,40 @@ class WalletIntegrationTest {
         assertEquals(topupAmount, transactions[0].amount)
     }
 
-//    @Test
-//    @WithMockUser(username = "testuser")
-//    fun `should create external debit transaction and update wallet balance`() {
-//        // Given
-//        val initialBalance = testWallet.balance
-//        val debitAmount = 30.0
-//        
-//        val requestDto = ExternalDebinRequestDto(
-//            amount = debitAmount,
-//            description = "Payment for services",
-//            externalWalletInfo = "Merchant XYZ"
-//        )
-//
-//        // when
-//        mockMvc.perform(
-//            post("/wallets/transactions/debin")
-//                .contentType(MediaType.APPLICATION_JSON)
-//                .content(objectMapper.writeValueAsString(requestDto))
-//        )
-//            .andExpect(status().isOk)
-//            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIN.toString()))
-//            .andExpect(jsonPath("$.amount").value(debitAmount))
-//            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
-//
-//        // Then
-//        val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
-//        assertEquals(initialBalance - debitAmount, updatedWallet.balance)
-//        
-//        // Verify
-//        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
-//        assertEquals(1, transactions.size)
-//        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
-//        assertEquals(debitAmount, transactions[0].amount)
-//    }
+    @Test
+    @WithMockUser(username = "testuser")
+    fun `should create external debit transaction and update wallet balance`() {
+        // Given
+        val initialBalance = testWallet.balance
+        val debitAmount = 30.0
+
+        val requestDto = ExternalDebinRequestDto(
+            amount = debitAmount,
+            description = "Payment for services",
+            externalWalletInfo = "Merchant XYZ"
+        )
+
+        // when
+        mockMvc.perform(
+            post("/wallets/transactions/debin")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIN.toString()))
+            .andExpect(jsonPath("$.amount").value(debitAmount))
+            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
+
+        // Then
+        val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
+        assertEquals(initialBalance - debitAmount, updatedWallet.balance)
+
+        // Verify
+        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
+        assertEquals(1, transactions.size)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
+        assertEquals(debitAmount, transactions[0].amount)
+    }
 
     @Test
     @WithMockUser(username = "testuser")
@@ -300,24 +300,24 @@ class WalletIntegrationTest {
             )))
     }
     
-   // @Test
-   // @WithMockUser(username = "testuser")
-   // fun `should reject transaction with insufficient funds`() {
-   //     // Given
-   //     val excessiveAmount = 500.0
-   //     
-   //     val requestDto = ExternalDebinRequestDto(
-   //         amount = excessiveAmount,
-   //         description = "Payment that should fail",
-   //         externalWalletInfo = "Merchant XYZ"
-   //     )
-//
-   //     // When & then
-   //     mockMvc.perform(
-   //         post("/wallets/transactions/debin")
-   //             .contentType(MediaType.APPLICATION_JSON)
-   //             .content(objectMapper.writeValueAsString(requestDto))
-   //     )
-   //         .andExpect(status().isBadRequest)
-   // }
+    @Test
+    @WithMockUser(username = "testuser")
+    fun `should reject transaction with insufficient funds`() {
+        // Given
+        val excessiveAmount = 500.0
+
+        val requestDto = ExternalDebinRequestDto(
+            amount = excessiveAmount,
+            description = "Payment that should fail",
+            externalWalletInfo = "Merchant XYZ"
+        )
+
+        // When & then
+        mockMvc.perform(
+            post("/wallets/transactions/debin")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto))
+        )
+            .andExpect(status().isBadRequest)
+    }
 } 
