@@ -3,6 +3,7 @@ package com.banco_platense.api.integration
 import com.banco_platense.api.ApiApplication
 import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
+import com.banco_platense.api.config.TestExternalPaymentServiceConfig
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
 import com.banco_platense.api.dto.ExternalDebinRequestDto
@@ -42,7 +43,8 @@ import java.time.LocalDateTime
     classes = [
         ApiApplication::class,
         TestSecurityConfig::class,
-        TestApplicationConfig::class
+        TestApplicationConfig::class,
+        TestExternalPaymentServiceConfig::class
     ],
     properties = ["spring.main.allow-bean-definition-overriding=true"]
 )
@@ -183,7 +185,7 @@ class WalletIntegrationTest {
         // Given
         val initialBalance = testWallet.balance
         val debitAmount = 30.0
-        
+
         val requestDto = ExternalDebinRequestDto(
             amount = debitAmount,
             description = "Payment for services",
@@ -199,14 +201,15 @@ class WalletIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIN.toString()))
             .andExpect(jsonPath("$.amount").value(debitAmount))
-            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
+            .andExpect(jsonPath("$.senderWalletId").value(null))
 
         // Then
         val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
-        assertEquals(initialBalance - debitAmount, updatedWallet.balance)
-        
+        // Verify wallet balance was increased (DEBIN adds money to the wallet)
+        assertEquals(initialBalance + debitAmount, updatedWallet.balance)
+
         // Verify
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
+        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
         assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
         assertEquals(debitAmount, transactions[0].amount)
@@ -299,25 +302,4 @@ class WalletIntegrationTest {
                 receivedTransaction.description
             )))
     }
-    
-    @Test
-    @WithMockUser(username = "testuser")
-    fun `should reject transaction with insufficient funds`() {
-        // Given
-        val excessiveAmount = 500.0
-        
-        val requestDto = ExternalDebinRequestDto(
-            amount = excessiveAmount,
-            description = "Payment that should fail",
-            externalWalletInfo = "Merchant XYZ"
-        )
-
-        // When & then
-        mockMvc.perform(
-            post("/wallets/transactions/debin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestDto))
-        )
-            .andExpect(status().isBadRequest)
-    }
-} 
+}

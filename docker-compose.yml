@@ -8,8 +8,11 @@ services:
     ports:
       - "8080:8080"
     env_file: .env
+    environment:
+      - EXTERNAL_MOCK_URL=http://external-services-mock:8081/external
     depends_on:
       - db
+      - external-services-mock
 
   db:
     image: postgres:13
@@ -18,6 +21,13 @@ services:
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  external-services-mock:
+    build:
+      context: ./external-services-mock
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
 
 volumes:
   postgres_data:
