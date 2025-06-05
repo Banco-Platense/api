@@ -74,7 +74,7 @@ class WalletService(
             timestamp = LocalDateTime.now(),
             description = createDto.description,
             senderWalletId = when (createDto.type) {
-                TransactionType.P2P,
+                TransactionType.P2P -> walletId
                 TransactionType.EXTERNAL_DEBIN -> null
                 TransactionType.EXTERNAL_TOPUP -> null
             },
