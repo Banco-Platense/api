@@ -8,8 +8,11 @@ services:
     ports:
       - "8080:8080"
     env_file: .env
+    environment:
+      - EXTERNAL_MOCK_URL=http://external-services-mock:8081/external
     depends_on:
       - db
+      - external-services-mock
 
   db:
     image: postgres:13

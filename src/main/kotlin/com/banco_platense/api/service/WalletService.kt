@@ -20,6 +20,10 @@ class WalletService(
     private val externalPaymentService: ExternalPaymentService
 ) {
 
+    companion object {
+        private const val ACCEPT_WALLET_ID = "11111111-1111-1111-1111-111111111111"
+    }
+
     @Transactional
     fun createWallet(userId: UUID): WalletResponseDto {
         val wallet = Wallet(
@@ -118,7 +122,6 @@ class WalletService(
             }
             TransactionType.EXTERNAL_DEBIN -> {
                 require(createDto.amount > 0) { "Amount must be positive for external debit" }
-                require(wallet.balance >= createDto.amount) { "Insufficient funds" }
                 requireNotNull(createDto.externalWalletInfo) { "External wallet info is required for external debit" }
             }
         }
