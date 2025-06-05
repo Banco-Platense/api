@@ -43,6 +43,11 @@ class WalletService(
         return mapToWalletResponseDto(wallet)
     }
 
+    @Transactional(readOnly = true)
+    fun getWalletById(walletId: UUID): Wallet? {
+        return walletRepository.findById(walletId).orElse(null)
+    }
+
     @Transactional
     fun createTransaction(walletId: UUID, createDto: CreateTransactionDto): TransactionResponseDto {
         val wallet = walletRepository.findById(walletId)

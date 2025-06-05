@@ -20,7 +20,10 @@ import com.banco_platense.api.dto.ExternalTopUpRequestDto
 import com.banco_platense.api.dto.ExternalDebinRequestDto
 import com.banco_platense.api.dto.WalletResponseDto
 import com.banco_platense.api.dto.TransactionResponseDto
+import com.banco_platense.api.dto.UserData
 import com.banco_platense.api.entity.TransactionType
+import com.banco_platense.api.entity.User
+import java.util.*
 
 @RestController
 @RequestMapping("/wallets")
@@ -262,5 +265,43 @@ class WalletController(
     private fun getCurrentUsername(): String {
         val authentication: Authentication = SecurityContextHolder.getContext().authentication
         return authentication.name
+    }
+
+    @GetMapping("/{walletId}/user")
+    @Operation(
+        summary = "Get user data by wallet ID",
+        description = "Retrieves the user information associated with the given wallet ID"
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "User information retrieved successfully",
+                content = [Content(
+                    mediaType = "application/json",
+                    schema = Schema(implementation = UserData::class)
+                )]
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Wallet or user not found",
+                content = [Content(mediaType = "application/json")]
+            )
+        ]
+    )
+    fun getUserByWalletId(@PathVariable walletId: UUID): ResponseEntity<Any> {
+        val wallet = walletService.getWalletById(walletId)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "Wallet not found"))
+        val user = userRepository.findById(wallet.userId)
+        return if (user.isPresent) {
+            val userData = UserData(
+                username = user.get().username,
+                id = user.get().id!!,
+                email = user.get().email
+            )
+            ResponseEntity.ok(userData)
+        } else {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to "User not found"))
+        }
     }
 } 
