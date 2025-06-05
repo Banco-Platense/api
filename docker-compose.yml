@@ -13,6 +13,14 @@ services:
     depends_on:
       - db
       - external-services-mock
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   db:
     image: postgres:13
@@ -21,6 +29,14 @@ services:
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   external-services-mock:
     build:
@@ -28,6 +44,14 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
 volumes:
   postgres_data:
