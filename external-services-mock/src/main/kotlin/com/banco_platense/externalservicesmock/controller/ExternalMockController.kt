@@ -28,11 +28,12 @@ class ExternalMockController {
 
     @PostMapping("/top-up")
     fun topUp(@RequestBody request: AccountRequestDto): ResponseEntity<ExternalResponseDto> {
-        return if (Random.nextDouble() <= 0.8) {
-            ResponseEntity.ok(ExternalResponseDto("success", "Money loaded successfully"))
-        } else {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return when (request.walletId) {
+            ACCEPT_WALLET_ID -> ResponseEntity.ok(ExternalResponseDto("success", "Money loaded successfully"))
+            REJECT_WALLET_ID -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ExternalResponseDto("error", "External service failed"))
+            else -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ExternalResponseDto("error", "Wallet not found"))
         }
     }
 

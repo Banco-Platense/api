@@ -153,8 +153,14 @@ class WalletService(
     }
 
     private fun mapToTransactionResponseDto(transaction: Transaction): TransactionResponseDto {
+        // Si la transacción es externa, usamos el externalWalletInfo como ID en el response
+        val externalId = transaction.externalWalletInfo
+        val idToReturn = when (transaction.type) {
+            TransactionType.EXTERNAL_TOPUP, TransactionType.EXTERNAL_DEBIN -> externalId?.let { UUID.fromString(it) }
+            else -> transaction.id
+        }
         return TransactionResponseDto(
-            id = transaction.id,
+            id = idToReturn,
             type = transaction.type,
             amount = transaction.amount,
             timestamp = transaction.timestamp,
