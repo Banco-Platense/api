@@ -38,6 +38,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
+import java.util.UUID
 
 @SpringBootTest(
     classes = [
@@ -258,6 +259,8 @@ class WalletIntegrationTest {
     @WithMockUser(username = "testuser")
     fun `should return all transactions for my wallet regardless of order`() {
         // Given
+        val externalId1 = UUID.randomUUID().toString()
+        val externalId2 = UUID.randomUUID().toString()
         val sentTransaction = transactionRepository.save(
             Transaction(
                 type = TransactionType.EXTERNAL_DEBIN,
@@ -265,7 +268,7 @@ class WalletIntegrationTest {
                 description = "Sent payment",
                 senderWalletId = testWallet.id,
                 receiverWalletId = null,
-                externalWalletInfo = "Merchant ABC",
+                externalWalletInfo = externalId1,
             )
         )
 
@@ -276,7 +279,7 @@ class WalletIntegrationTest {
                 description = "Received top up",
                 senderWalletId = null,
                 receiverWalletId = testWallet.id,
-                externalWalletInfo = "Bank Account",
+                externalWalletInfo = externalId2,
             )
         )
 
@@ -286,8 +289,8 @@ class WalletIntegrationTest {
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
             .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.containsInAnyOrder(
-                sentTransaction.id.toString(), 
-                receivedTransaction.id.toString()
+                externalId1,
+                externalId2
             )))
             .andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.containsInAnyOrder(
                 sentTransaction.type.toString(), 

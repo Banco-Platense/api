@@ -249,6 +249,8 @@ class WalletServiceTest {
     @Test
     fun `should get all transactions for a wallet`() {
         // Given
+        val externalId1 = UUID.randomUUID().toString()
+        val externalId2 = UUID.randomUUID().toString()
         transactionRepository.save(
             Transaction(
                 type = TransactionType.EXTERNAL_DEBIN,
@@ -256,10 +258,9 @@ class WalletServiceTest {
                 description = "Payment for services",
                 senderWalletId = testWallet.id,
                 receiverWalletId = null,
-                externalWalletInfo = "Merchant ABC"
+                externalWalletInfo = externalId1
             )
         )
-        
         transactionRepository.save(
             Transaction(
                 type = TransactionType.EXTERNAL_TOPUP,
@@ -267,7 +268,7 @@ class WalletServiceTest {
                 description = "Top up",
                 senderWalletId = null,
                 receiverWalletId = testWallet.id,
-                externalWalletInfo = "Bank Account"
+                externalWalletInfo = externalId2
             )
         )
         
