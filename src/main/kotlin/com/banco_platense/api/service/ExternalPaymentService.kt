@@ -16,10 +16,16 @@ class ExternalPaymentService(
     private val restTemplate = RestTemplate()
 
     fun topUp(amount: Double, externalWalletInfo: String): String {
-        Thread.sleep(500)
-        val externalTransactionId = UUID.randomUUID().toString()
-        println("Simulated external top-up: amount=$amount, source=$externalWalletInfo, externalTransactionId=$externalTransactionId")
-        return externalTransactionId
+        val url = "$externalServiceUrl/top-up"
+        val request = DebinRequest(walletId = externalWalletInfo, amount = amount)
+        val headers = HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON }
+        val entity = HttpEntity(request, headers)
+        val response: ResponseEntity<DebinResponse> = restTemplate.postForEntity(url, entity, DebinResponse::class.java)
+        if (!response.statusCode.is2xxSuccessful) {
+            val errorMsg = response.body?.message ?: "External top-up failed with status ${'$'}{response.statusCode}"
+            throw RuntimeException(errorMsg)
+        }
+        return externalWalletInfo
     }
 
     fun debin(amount: Double, externalWalletInfo: String): String {
