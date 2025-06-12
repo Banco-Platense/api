@@ -146,7 +146,7 @@ class BankingAPIUser(HttpUser):
         topup_data = {
             "amount": topup_amount,
             "description": f"Topup via Bank Account {random.randint(1000, 9999)}",
-            "externalWalletInfo": f"BankAccount-{random.randint(100000, 999999)}"
+            "externalWalletInfo": "11111111-1111-1111-1111-111111111111"
         }
         
         with self.client.post(
