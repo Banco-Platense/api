@@ -149,11 +149,23 @@ class WalletController(
 
         val userWallet = walletService.getWalletByUserId(user.id!!)
 
+        // Determine receiver wallet ID based on provided wallet ID or username
+        val receiverWalletId = request.receiverWalletId ?: run {
+            if (request.receiverUsername.isNullOrBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(mapOf("error" to "Receiver wallet ID or username must be provided"))
+            }
+            val receiverUser = userRepository.findByUsername(request.receiverUsername)
+                ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(mapOf("error" to "Receiver user not found"))
+            walletService.getWalletByUserId(receiverUser.id!!).id!!
+        }
+
         val createDto = CreateTransactionDto(
             type = TransactionType.P2P,
             amount = request.amount,
             description = request.description,
-            receiverWalletId = request.receiverWalletId
+            receiverWalletId = receiverWalletId
         )
 
         val transaction = walletService.createTransaction(userWallet.id!!, createDto)
