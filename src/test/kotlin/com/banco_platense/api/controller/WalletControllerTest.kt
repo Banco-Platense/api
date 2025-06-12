@@ -201,7 +201,7 @@ class WalletControllerTest {
             externalWalletInfo = "Merchant XYZ"
         )
         val expectedDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = requestDto.amount,
             description = requestDto.description,
             externalWalletInfo = requestDto.externalWalletInfo
@@ -209,7 +209,7 @@ class WalletControllerTest {
         val transactionId = UUID.randomUUID()
         val transactionResponse = TransactionResponseDto(
             id = transactionId,
-            type = TransactionType.EXTERNAL_DEBIT,
+            type = TransactionType.EXTERNAL_DEBIN,
             amount = requestDto.amount,
             timestamp = LocalDateTime.now(),
             description = requestDto.description,
@@ -255,7 +255,7 @@ class WalletControllerTest {
             ),
             TransactionResponseDto(
                 id = transaction2Id,
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 25.0,
                 timestamp = LocalDateTime.now(),
                 description = "Payment for services",

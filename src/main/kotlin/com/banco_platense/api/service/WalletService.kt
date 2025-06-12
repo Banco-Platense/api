@@ -8,7 +8,6 @@ import com.banco_platense.api.entity.TransactionType
 import com.banco_platense.api.entity.Wallet
 import com.banco_platense.api.repository.TransactionRepository
 import com.banco_platense.api.repository.WalletRepository
-import com.banco_platense.api.service.ExternalPaymentService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -20,6 +19,10 @@ class WalletService(
     private val transactionRepository: TransactionRepository,
     private val externalPaymentService: ExternalPaymentService
 ) {
+
+    companion object {
+        private const val ACCEPT_WALLET_ID = "11111111-1111-1111-1111-111111111111"
+    }
 
     @Transactional
     fun createWallet(userId: UUID): WalletResponseDto {
@@ -40,6 +43,11 @@ class WalletService(
         return mapToWalletResponseDto(wallet)
     }
 
+    @Transactional(readOnly = true)
+    fun getWalletById(walletId: UUID): Wallet? {
+        return walletRepository.findById(walletId).orElse(null)
+    }
+
     @Transactional
     fun createTransaction(walletId: UUID, createDto: CreateTransactionDto): TransactionResponseDto {
         val wallet = walletRepository.findById(walletId)
@@ -55,8 +63,8 @@ class WalletService(
         
         // Simulate external interaction for top-up or DEBIN and obtain an external transaction ID
         val externalInfo = when (createDto.type) {
-            TransactionType.EXTERNAL_TOPUP -> externalPaymentService.simulateTopUp(createDto.amount, createDto.externalWalletInfo!!)
-            TransactionType.EXTERNAL_DEBIT -> externalPaymentService.simulateDebin(createDto.amount, createDto.externalWalletInfo!!)
+            TransactionType.EXTERNAL_TOPUP -> externalPaymentService.topUp(createDto.amount, createDto.externalWalletInfo!!)
+            TransactionType.EXTERNAL_DEBIN -> externalPaymentService.debin(createDto.amount, createDto.externalWalletInfo!!)
             else -> createDto.externalWalletInfo
         }
         
@@ -66,14 +74,14 @@ class WalletService(
             timestamp = LocalDateTime.now(),
             description = createDto.description,
             senderWalletId = when (createDto.type) {
-                TransactionType.P2P,
-                TransactionType.EXTERNAL_DEBIT -> walletId
+                TransactionType.P2P -> walletId
+                TransactionType.EXTERNAL_DEBIN -> null
                 TransactionType.EXTERNAL_TOPUP -> null
             },
             receiverWalletId = when (createDto.type) {
                 TransactionType.P2P -> createDto.receiverWalletId
                 TransactionType.EXTERNAL_TOPUP -> walletId
-                TransactionType.EXTERNAL_DEBIT -> null
+                TransactionType.EXTERNAL_DEBIN -> walletId
             },
             externalWalletInfo = externalInfo
         )
@@ -117,9 +125,8 @@ class WalletService(
                 require(createDto.amount > 0) { "Amount must be positive for external topup" }
                 requireNotNull(createDto.externalWalletInfo) { "External wallet info is required for external topup" }
             }
-            TransactionType.EXTERNAL_DEBIT -> {
+            TransactionType.EXTERNAL_DEBIN -> {
                 require(createDto.amount > 0) { "Amount must be positive for external debit" }
-                require(wallet.balance >= createDto.amount) { "Insufficient funds" }
                 requireNotNull(createDto.externalWalletInfo) { "External wallet info is required for external debit" }
             }
         }
@@ -129,7 +136,7 @@ class WalletService(
         when (createDto.type) {
             TransactionType.P2P -> wallet.balance -= createDto.amount
             TransactionType.EXTERNAL_TOPUP -> wallet.balance += createDto.amount
-            TransactionType.EXTERNAL_DEBIT -> wallet.balance -= createDto.amount
+            TransactionType.EXTERNAL_DEBIN -> wallet.balance += createDto.amount
         }
         wallet.updatedAt = LocalDateTime.now()
         walletRepository.save(wallet)
@@ -146,8 +153,14 @@ class WalletService(
     }
 
     private fun mapToTransactionResponseDto(transaction: Transaction): TransactionResponseDto {
+        // Si la transacción es externa, usamos el externalWalletInfo como ID en el response
+        val externalId = transaction.externalWalletInfo
+        val idToReturn = when (transaction.type) {
+            TransactionType.EXTERNAL_TOPUP, TransactionType.EXTERNAL_DEBIN -> externalId?.let { UUID.fromString(it) }
+            else -> transaction.id
+        }
         return TransactionResponseDto(
-            id = transaction.id,
+            id = idToReturn,
             type = transaction.type,
             amount = transaction.amount,
             timestamp = transaction.timestamp,

@@ -3,6 +3,7 @@ package com.banco_platense.api.service
 import com.banco_platense.api.ApiApplication
 import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
+import com.banco_platense.api.config.TestExternalPaymentServiceConfig
 import com.banco_platense.api.dto.CreateTransactionDto
 import com.banco_platense.api.entity.Transaction
 import com.banco_platense.api.entity.TransactionType
@@ -23,7 +24,8 @@ import java.util.UUID
     classes = [
         ApiApplication::class,
         TestSecurityConfig::class,
-        TestApplicationConfig::class
+        TestApplicationConfig::class,
+        TestExternalPaymentServiceConfig::class
     ],
     properties = ["spring.main.allow-bean-definition-overriding=true"]
 )
@@ -149,41 +151,41 @@ class WalletServiceTest {
     }
     
     @Test
-    fun `should create external debit transaction`() {
+    fun `should create external debin transaction`() {
         // Given
         val initialBalance = testWallet.balance
-        val debitAmount = 50.0
-        
+        val debinAmount = 50.0
+
         val createDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
-            amount = debitAmount,
+            type = TransactionType.EXTERNAL_DEBIN,
+            amount = debinAmount,
             description = "Payment for services",
             externalWalletInfo = "Merchant XYZ"
         )
-        
+
         // When
         val result = walletService.createTransaction(testWallet.id!!, createDto)
-        
+
         // Then
         assertNotNull(result.id)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, result.type)
-        assertEquals(debitAmount, result.amount)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, result.type)
+        assertEquals(debinAmount, result.amount)
         assertEquals("Payment for services", result.description)
-        assertEquals(testWallet.id, result.senderWalletId)
+        assertEquals(testWallet.id, result.receiverWalletId)
         assertNotNull(result.externalWalletInfo)
         assertDoesNotThrow { UUID.fromString(result.externalWalletInfo) }
-        
+
         // Verify balance was updated
         val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
-        assertEquals(initialBalance - debitAmount, updatedWallet.balance)
-        
+        assertEquals(initialBalance + debinAmount, updatedWallet.balance)
+
         // Verify transaction was saved
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
+        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
         assertNotNull(transactions[0].externalWalletInfo)
         assertDoesNotThrow { UUID.fromString(transactions[0].externalWalletInfo) }
-        assertEquals(debitAmount, transactions[0].amount)
+        assertEquals(debinAmount, transactions[0].amount)
     }
     
     @Test
@@ -227,26 +229,6 @@ class WalletServiceTest {
     }
     
     @Test
-    fun `should throw exception when insufficient funds for debit transaction`() {
-        // Given
-        val excessiveAmount = 200.0
-        
-        val createDto = CreateTransactionDto(
-            type = TransactionType.EXTERNAL_DEBIT,
-            amount = excessiveAmount,
-            description = "Payment for services",
-            externalWalletInfo = "Merchant XYZ"
-        )
-        
-        // When & Then
-        val exception = assertThrows(IllegalArgumentException::class.java) {
-            walletService.createTransaction(testWallet.id!!, createDto)
-        }
-        
-        assertTrue(exception.message?.contains("Insufficient funds") == true)
-    }
-    
-    @Test
     fun `should throw exception when trying to send to self`() {
         // Given
         val createDto = CreateTransactionDto(
@@ -267,17 +249,18 @@ class WalletServiceTest {
     @Test
     fun `should get all transactions for a wallet`() {
         // Given
+        val externalId1 = UUID.randomUUID().toString()
+        val externalId2 = UUID.randomUUID().toString()
         transactionRepository.save(
             Transaction(
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 30.0,
                 description = "Payment for services",
                 senderWalletId = testWallet.id,
                 receiverWalletId = null,
-                externalWalletInfo = "Merchant ABC"
+                externalWalletInfo = externalId1
             )
         )
-        
         transactionRepository.save(
             Transaction(
                 type = TransactionType.EXTERNAL_TOPUP,
@@ -285,7 +268,7 @@ class WalletServiceTest {
                 description = "Top up",
                 senderWalletId = null,
                 receiverWalletId = testWallet.id,
-                externalWalletInfo = "Bank Account"
+                externalWalletInfo = externalId2
             )
         )
         
@@ -295,7 +278,7 @@ class WalletServiceTest {
         // Then
         assertEquals(2, result.size)
         
-        assertTrue(result.any { it.type == TransactionType.EXTERNAL_DEBIT })
+        assertTrue(result.any { it.type == TransactionType.EXTERNAL_DEBIN })
         assertTrue(result.any { it.type == TransactionType.EXTERNAL_TOPUP })
     }
 } 

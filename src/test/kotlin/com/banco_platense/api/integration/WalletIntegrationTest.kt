@@ -3,6 +3,7 @@ package com.banco_platense.api.integration
 import com.banco_platense.api.ApiApplication
 import com.banco_platense.api.config.TestApplicationConfig
 import com.banco_platense.api.config.TestSecurityConfig
+import com.banco_platense.api.config.TestExternalPaymentServiceConfig
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
 import com.banco_platense.api.dto.ExternalDebinRequestDto
@@ -37,12 +38,14 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDateTime
+import java.util.UUID
 
 @SpringBootTest(
     classes = [
         ApiApplication::class,
         TestSecurityConfig::class,
-        TestApplicationConfig::class
+        TestApplicationConfig::class,
+        TestExternalPaymentServiceConfig::class
     ],
     properties = ["spring.main.allow-bean-definition-overriding=true"]
 )
@@ -183,7 +186,7 @@ class WalletIntegrationTest {
         // Given
         val initialBalance = testWallet.balance
         val debitAmount = 30.0
-        
+
         val requestDto = ExternalDebinRequestDto(
             amount = debitAmount,
             description = "Payment for services",
@@ -197,18 +200,19 @@ class WalletIntegrationTest {
                 .content(objectMapper.writeValueAsString(requestDto))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIT.toString()))
+            .andExpect(jsonPath("$.type").value(TransactionType.EXTERNAL_DEBIN.toString()))
             .andExpect(jsonPath("$.amount").value(debitAmount))
-            .andExpect(jsonPath("$.senderWalletId").value(testWallet.id.toString()))
+            .andExpect(jsonPath("$.senderWalletId").value(null))
 
         // Then
         val updatedWallet = walletRepository.findById(testWallet.id!!).orElseThrow()
-        assertEquals(initialBalance - debitAmount, updatedWallet.balance)
-        
+        // Verify wallet balance was increased (DEBIN adds money to the wallet)
+        assertEquals(initialBalance + debitAmount, updatedWallet.balance)
+
         // Verify
-        val transactions = transactionRepository.findBySenderWalletId(testWallet.id!!)
+        val transactions = transactionRepository.findByReceiverWalletId(testWallet.id!!)
         assertEquals(1, transactions.size)
-        assertEquals(TransactionType.EXTERNAL_DEBIT, transactions[0].type)
+        assertEquals(TransactionType.EXTERNAL_DEBIN, transactions[0].type)
         assertEquals(debitAmount, transactions[0].amount)
     }
 
@@ -255,14 +259,16 @@ class WalletIntegrationTest {
     @WithMockUser(username = "testuser")
     fun `should return all transactions for my wallet regardless of order`() {
         // Given
+        val externalId1 = UUID.randomUUID().toString()
+        val externalId2 = UUID.randomUUID().toString()
         val sentTransaction = transactionRepository.save(
             Transaction(
-                type = TransactionType.EXTERNAL_DEBIT,
+                type = TransactionType.EXTERNAL_DEBIN,
                 amount = 20.0,
                 description = "Sent payment",
                 senderWalletId = testWallet.id,
                 receiverWalletId = null,
-                externalWalletInfo = "Merchant ABC",
+                externalWalletInfo = externalId1,
             )
         )
 
@@ -273,7 +279,7 @@ class WalletIntegrationTest {
                 description = "Received top up",
                 senderWalletId = null,
                 receiverWalletId = testWallet.id,
-                externalWalletInfo = "Bank Account",
+                externalWalletInfo = externalId2,
             )
         )
 
@@ -283,8 +289,8 @@ class WalletIntegrationTest {
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isNotEmpty())
             .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.containsInAnyOrder(
-                sentTransaction.id.toString(), 
-                receivedTransaction.id.toString()
+                externalId1,
+                externalId2
             )))
             .andExpect(jsonPath("$[*].type").value(org.hamcrest.Matchers.containsInAnyOrder(
                 sentTransaction.type.toString(), 
@@ -299,25 +305,4 @@ class WalletIntegrationTest {
                 receivedTransaction.description
             )))
     }
-    
-    @Test
-    @WithMockUser(username = "testuser")
-    fun `should reject transaction with insufficient funds`() {
-        // Given
-        val excessiveAmount = 500.0
-        
-        val requestDto = ExternalDebinRequestDto(
-            amount = excessiveAmount,
-            description = "Payment that should fail",
-            externalWalletInfo = "Merchant XYZ"
-        )
-
-        // When & then
-        mockMvc.perform(
-            post("/wallets/transactions/debin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestDto))
-        )
-            .andExpect(status().isBadRequest)
-    }
-} 
+}
