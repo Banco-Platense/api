@@ -158,7 +158,8 @@ class WalletController(
             val receiverUser = userRepository.findByUsername(request.receiverUsername)
                 ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(mapOf("error" to "Receiver user not found"))
-            walletService.getWalletByUserId(receiverUser.id!!).id!!
+            val receiverWallet = walletService.getWalletByUserId(receiverUser.id!!)
+            receiverWallet.id!!
         }
 
         val createDto = CreateTransactionDto(
