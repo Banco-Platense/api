@@ -47,7 +47,6 @@ class UserService(
 
         val saved = userRepository.save(user)
         
-        // Create a wallet for the new user with initial balance of 0
         walletService.createWallet(saved.id!!)
         
         return RegistrationResult.Success(saved.id!!)

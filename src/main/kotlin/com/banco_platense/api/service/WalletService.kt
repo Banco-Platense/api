@@ -20,10 +20,6 @@ class WalletService(
     private val externalPaymentService: ExternalPaymentService
 ) {
 
-    companion object {
-        private const val ACCEPT_WALLET_ID = "11111111-1111-1111-1111-111111111111"
-    }
-
     @Transactional
     fun createWallet(userId: UUID): WalletResponseDto {
         val wallet = Wallet(
@@ -61,7 +57,6 @@ class WalletService(
 
         validateTransaction(wallet, createDto)
         
-        // Simulate external interaction for top-up or DEBIN and obtain an external transaction ID
         val externalInfo = when (createDto.type) {
             TransactionType.EXTERNAL_TOPUP -> externalPaymentService.topUp(createDto.amount, createDto.externalWalletInfo!!)
             TransactionType.EXTERNAL_DEBIN -> externalPaymentService.debin(createDto.amount, createDto.externalWalletInfo!!)
@@ -153,7 +148,6 @@ class WalletService(
     }
 
     private fun mapToTransactionResponseDto(transaction: Transaction): TransactionResponseDto {
-        // Si la transacción es externa, usamos el externalWalletInfo como ID en el response
         val externalId = transaction.externalWalletInfo
         val idToReturn = when (transaction.type) {
             TransactionType.EXTERNAL_TOPUP, TransactionType.EXTERNAL_DEBIN -> externalId?.let { UUID.fromString(it) }

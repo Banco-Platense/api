@@ -22,7 +22,6 @@ import com.banco_platense.api.dto.WalletResponseDto
 import com.banco_platense.api.dto.TransactionResponseDto
 import com.banco_platense.api.dto.UserData
 import com.banco_platense.api.entity.TransactionType
-import com.banco_platense.api.entity.User
 import java.util.*
 
 @RestController
@@ -149,7 +148,6 @@ class WalletController(
 
         val userWallet = walletService.getWalletByUserId(user.id!!)
 
-        // Determine receiver wallet ID based on provided wallet ID or username
         val receiverWalletId = request.receiverWalletId ?: run {
             if (request.receiverUsername.isNullOrBlank()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)

@@ -7,7 +7,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.beans.factory.annotation.Value
-import java.util.UUID
 
 @Service
 class ExternalPaymentService(
