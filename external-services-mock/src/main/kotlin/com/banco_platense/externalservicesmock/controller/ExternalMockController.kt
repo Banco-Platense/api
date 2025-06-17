@@ -26,17 +26,6 @@ class ExternalMockController {
         private const val REJECT_WALLET_ID = "22222222-2222-2222-2222-222222222222"
     }
 
-    @PostMapping("/top-up")
-    fun topUp(@RequestBody request: AccountRequestDto): ResponseEntity<ExternalResponseDto> {
-        return when (request.walletId) {
-            ACCEPT_WALLET_ID -> ResponseEntity.ok(ExternalResponseDto("success", "Money loaded successfully"))
-            REJECT_WALLET_ID -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ExternalResponseDto("error", "External service failed"))
-            else -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ExternalResponseDto("error", "Wallet not found"))
-        }
-    }
-
     @PostMapping("/debin/request")
     fun debinRequest(@RequestBody request: AccountRequestDto): ResponseEntity<ExternalResponseDto> {
         return when (request.walletId) {
