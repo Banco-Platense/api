@@ -7,7 +7,6 @@ import com.banco_platense.api.config.TestExternalPaymentServiceConfig
 import com.banco_platense.api.dto.P2PTransactionRequestDto
 import com.banco_platense.api.dto.ExternalTopUpRequestDto
 import com.banco_platense.api.dto.ExternalDebinRequestDto
-import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.Transaction
 import com.banco_platense.api.entity.TransactionType
 import com.banco_platense.api.entity.User
@@ -96,7 +95,6 @@ class WalletIntegrationTest {
                 email = "testuser@example.com",
                 username = "testuser",
                 passwordHash = "hashedpassword",
-                drinks = Drink.COFFEE
             )
         )
         
@@ -105,7 +103,6 @@ class WalletIntegrationTest {
                 email = "otheruser@example.com",
                 username = "otheruser",
                 passwordHash = "hashedpassword",
-                drinks = Drink.COFFEE
             )
         )
         

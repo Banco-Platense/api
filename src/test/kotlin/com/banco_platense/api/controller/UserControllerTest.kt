@@ -5,7 +5,6 @@ import com.banco_platense.api.dto.RegistrationRequest
 import com.banco_platense.api.dto.RegistrationResult
 import com.banco_platense.api.service.UserService
 import com.banco_platense.api.entity.User as UserEntity
-import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.config.JwtUtil
 import com.banco_platense.api.config.TestJacksonConfig
 import com.banco_platense.api.config.TestSecurityConfig
@@ -77,8 +76,7 @@ class UserControllerTest {
         id = UUID.randomUUID(),
         email = "test@example.com",
         username = "testuser",
-        passwordHash = "hashedpassword",
-        drinks = Drink.COFFEE
+        passwordHash = "hashedpassword"
     )
 
     private val mockJwtToken = "mock.jwt.token"

@@ -2,7 +2,6 @@ package com.banco_platense.api.service
 
 import com.banco_platense.api.dto.RegistrationRequest
 import com.banco_platense.api.dto.RegistrationResult
-import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.User
 import com.banco_platense.api.repository.UserRepository
 import org.junit.jupiter.api.Assertions.*
@@ -41,8 +40,7 @@ class UserServiceTest {
         id = UUID.randomUUID(),
         email = "existing@example.com",
         username = "existinguser",
-        passwordHash = "hashedpassword",
-        drinks = Drink.COFFEE
+        passwordHash = "hashedpassword"
     )
 
     @BeforeEach
@@ -127,57 +125,6 @@ class UserServiceTest {
         verify(userRepository).findByUsername(validRegistrationRequest.username)
         verify(userRepository, never()).save(any<User>())
         verify(walletService, never()).createWallet(any())
-    }
-
-    @Test
-    fun `registerUser should create user with MATCHA drink for panchubi username`() {
-        // Given
-        val panchubiRequest = validRegistrationRequest.copy(username = "panchubi123")
-        val encodedPassword = "encoded_password"
-        val savedUserId = UUID.randomUUID()
-        whenever(passwordEncoder.encode(panchubiRequest.password)).thenReturn(encodedPassword)
-        whenever(userRepository.findByEmail(panchubiRequest.email)).thenReturn(null)
-        whenever(userRepository.findByUsername(panchubiRequest.username)).thenReturn(null)
-        whenever(userRepository.save(any<User>())).thenAnswer { invocation ->
-            val user = invocation.getArgument<User>(0)
-            user.copy(id = savedUserId)
-        }
-        whenever(walletService.createWallet(any())).thenReturn(mock())
-
-        // When
-        val result = userService.registerUser(panchubiRequest)
-
-        // Then
-        assertTrue(result is RegistrationResult.Success)
-        
-        verify(userRepository).save(argThat<User> { user ->
-            user.drinks == Drink.MATCHA && user.username == "panchubi123"
-        })
-    }
-
-    @Test
-    fun `registerUser should create user with COFFEE drink for regular username`() {
-        // Given
-        val encodedPassword = "encoded_password"
-        val savedUserId = UUID.randomUUID()
-        whenever(passwordEncoder.encode(validRegistrationRequest.password)).thenReturn(encodedPassword)
-        whenever(userRepository.findByEmail(validRegistrationRequest.email)).thenReturn(null)
-        whenever(userRepository.findByUsername(validRegistrationRequest.username)).thenReturn(null)
-        whenever(userRepository.save(any<User>())).thenAnswer { invocation ->
-            val user = invocation.getArgument<User>(0)
-            user.copy(id = savedUserId)
-        }
-        whenever(walletService.createWallet(any())).thenReturn(mock())
-
-        // When
-        val result = userService.registerUser(validRegistrationRequest)
-
-        // Then
-        assertTrue(result is RegistrationResult.Success)
-        
-        verify(userRepository).save(argThat<User> { user ->
-            user.drinks == Drink.COFFEE && user.username == "testuser"
-        })
     }
 
     @Test

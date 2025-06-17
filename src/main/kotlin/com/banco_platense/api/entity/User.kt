@@ -17,5 +17,4 @@ data class User(
     var email: String,
     var username: String,
     var passwordHash: String,
-    var drinks: Drink
 )

@@ -1,6 +1,5 @@
 package com.banco_platense.api.service
 
-import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.User
 import com.banco_platense.api.repository.UserRepository
 import org.junit.jupiter.api.Assertions.*
@@ -29,7 +28,6 @@ class UserDetailsServiceImplTest {
         email = "test@example.com",
         username = "testuser",
         passwordHash = "hashedpassword123",
-        drinks = Drink.COFFEE
     )
 
     @BeforeEach
@@ -119,28 +117,6 @@ class UserDetailsServiceImplTest {
             assertEquals(user.username, userDetails.username)
             assertEquals(user.passwordHash, userDetails.password)
             assertEquals(listOf(SimpleGrantedAuthority("ROLE_USER")), userDetails.authorities.toList())
-        }
-    }
-
-    @Test
-    fun `loadUserByUsername should return same authorities for all users`() {
-        // Given
-        val users = listOf(
-            testUser.copy(username = "regular_user"),
-            testUser.copy(username = "panchubi_user", drinks = Drink.MATCHA),
-            testUser.copy(username = "another_user", drinks = Drink.COFFEE)
-        )
-
-        users.forEach { user ->
-            whenever(userRepository.findByUsername(user.username)).thenReturn(user)
-
-            // When
-            val userDetails = userDetailsService.loadUserByUsername(user.username)
-
-            // Then - All users should have ROLE_USER regardless of drinks preference
-            val authorities = userDetails.authorities
-            assertEquals(1, authorities.size)
-            assertTrue(authorities.contains(SimpleGrantedAuthority("ROLE_USER")))
         }
     }
 

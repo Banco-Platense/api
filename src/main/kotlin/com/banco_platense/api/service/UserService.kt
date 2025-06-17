@@ -2,13 +2,11 @@ package com.banco_platense.api.service
 
 import com.banco_platense.api.dto.RegistrationRequest
 import com.banco_platense.api.dto.RegistrationResult
-import com.banco_platense.api.entity.Drink
 import com.banco_platense.api.entity.User
 import com.banco_platense.api.repository.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.*
 
 @Service
 class UserService(
@@ -35,7 +33,6 @@ class UserService(
             email = registrationRequest.email,
             username = registrationRequest.username,
             passwordHash = encodedPassword,
-            drinks = if (registrationRequest.username.contains("panchubi")) Drink.MATCHA else Drink.COFFEE
         )
 
         val saved = userRepository.save(user)

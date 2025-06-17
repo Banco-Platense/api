@@ -52,7 +52,7 @@ class WalletControllerTest {
     private var mockJwtToken: String = "mock-jwt-token"
     private val userId = UUID.randomUUID()
     private val walletId = UUID.randomUUID()
-    private val testUser = User(id = userId, username = "testuser", email = "test@example.com", passwordHash = "hashedpw", drinks = com.banco_platense.api.entity.Drink.COFFEE)
+    private val testUser = User(id = userId, username = "testuser", email = "test@example.com", passwordHash = "hashedpw")
     private val testWallet = WalletResponseDto(
         id = walletId,
         userId = userId,

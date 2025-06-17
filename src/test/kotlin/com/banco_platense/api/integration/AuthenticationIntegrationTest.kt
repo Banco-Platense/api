@@ -211,39 +211,6 @@ class AuthenticationIntegrationTest {
     }
 
     @Test
-    fun `panchubi user should get MATCHA drink preference`() {
-        val panchubiRequest = validRegistrationRequest.copy(
-            username = "panchubi_test",
-            email = "panchubi@test.com"
-        )
-
-        mockMvc.perform(
-            post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(panchubiRequest))
-        )
-            .andExpect(status().isOk)
-
-        val savedUser = userRepository.findByUsername("panchubi_test")
-        assertNotNull(savedUser)
-        assertEquals(com.banco_platense.api.entity.Drink.MATCHA, savedUser!!.drinks)
-    }
-
-    @Test
-    fun `regular user should get COFFEE drink preference`() {
-        mockMvc.perform(
-            post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validRegistrationRequest))
-        )
-            .andExpect(status().isOk)
-
-        val savedUser = userRepository.findByUsername(validRegistrationRequest.username)
-        assertNotNull(savedUser)
-        assertEquals(com.banco_platense.api.entity.Drink.COFFEE, savedUser!!.drinks)
-    }
-
-    @Test
     fun `registration should create wallet with zero balance`() {
         mockMvc.perform(
             post("/auth/register")
