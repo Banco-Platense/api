@@ -11,9 +11,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
-import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -26,12 +23,7 @@ import org.slf4j.LoggerFactory
 @Tag(name = "Authentication", description = "User authentication and registration endpoints")
 class UserController(
     private val userService: UserService,
-    private val authenticationManager: AuthenticationManager,
-    private val userDetailsService: UserDetailsService,
-    private val jwtUtil: JwtUtil
 ) {
-
-    private val logger: Logger = LoggerFactory.getLogger(UserController::class.java)
 
     @PostMapping("/register")
     @Operation(
@@ -91,20 +83,6 @@ class UserController(
         ]
     )
     fun login(@RequestBody loginRequest: LoginRequest): ResponseEntity<Any> {
-        logger.info("Login attempt for user: {}", loginRequest.username)
-        
-        authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(
-                loginRequest.username,
-                loginRequest.password
-            )
-        )
-        
-        val userDetails = userDetailsService.loadUserByUsername(loginRequest.username)
-        val token = jwtUtil.generateToken(userDetails)
-        logger.info("Login successful for user: {}", loginRequest.username)
-        val user = userService.getUserByUsername(loginRequest.username)
-        
-        return ResponseEntity.ok(LoginResponse(token, UserData(username = user.username, email = user.email, id = user.id!!)))
+        return ResponseEntity.ok(userService.login(loginRequest))
     }
 }

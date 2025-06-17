@@ -1,13 +1,11 @@
 package com.banco_platense.api.controller
 
-import com.banco_platense.api.dto.LoginRequest
-import com.banco_platense.api.dto.RegistrationRequest
-import com.banco_platense.api.dto.RegistrationResult
 import com.banco_platense.api.service.UserService
 import com.banco_platense.api.entity.User as UserEntity
 import com.banco_platense.api.config.JwtUtil
 import com.banco_platense.api.config.TestJacksonConfig
 import com.banco_platense.api.config.TestSecurityConfig
+import com.banco_platense.api.dto.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import java.util.UUID
@@ -170,10 +168,11 @@ class UserControllerTest {
     @Test
     fun `login should return JWT token when credentials are valid`() {
         // Given
-        whenever(authenticationManager.authenticate(any())).thenReturn(mock())
-        whenever(userDetailsService.loadUserByUsername(validLoginRequest.username)).thenReturn(mockUserDetails)
-        whenever(jwtUtil.generateToken(mockUserDetails)).thenReturn(mockJwtToken)
-        whenever(userService.getUserByUsername(validLoginRequest.username)).thenReturn(mockUserEntity)
+        val loginResponse = LoginResponse(
+            mockJwtToken,
+            UserData(username = validLoginRequest.username, email = mockUserEntity.email, id = mockUserEntity.id!!)
+        )
+        whenever(userService.login(validLoginRequest)).thenReturn(loginResponse)
 
         // When & Then
         mockMvc.perform(
@@ -185,18 +184,13 @@ class UserControllerTest {
             .andExpect(jsonPath("$.token").value(mockJwtToken))
             .andExpect(jsonPath("$.user.username").value(validLoginRequest.username))
 
-        verify(authenticationManager).authenticate(argThat<UsernamePasswordAuthenticationToken> { auth ->
-            auth.principal == validLoginRequest.username && auth.credentials == validLoginRequest.password
-        })
-        verify(userDetailsService).loadUserByUsername(validLoginRequest.username)
-        verify(jwtUtil).generateToken(mockUserDetails)
-        verify(userService).getUserByUsername(validLoginRequest.username)
+        verify(userService).login(validLoginRequest)
     }
 
     @Test
     fun `login should return unauthorized when credentials are invalid`() {
         // Given
-        whenever(authenticationManager.authenticate(any())).thenThrow(BadCredentialsException("Bad credentials"))
+        whenever(userService.login(any())).thenThrow(BadCredentialsException("Bad credentials"))
 
         // When & Then
         mockMvc.perform(
@@ -206,16 +200,14 @@ class UserControllerTest {
         )
             .andExpect(status().isUnauthorized)
 
-        verify(authenticationManager).authenticate(any())
-        verify(userDetailsService, never()).loadUserByUsername(any())
-        verify(jwtUtil, never()).generateToken(any())
+        verify(userService).login(any())
     }
 
     @Test
     fun `login should handle empty username`() {
         // Given
         val emptyUsernameRequest = validLoginRequest.copy(username = "")
-        whenever(authenticationManager.authenticate(any())).thenThrow(BadCredentialsException("Empty username"))
+        whenever(userService.login(emptyUsernameRequest)).thenThrow(BadCredentialsException("Empty username"))
 
         // When & Then
         mockMvc.perform(
@@ -230,7 +222,7 @@ class UserControllerTest {
     fun `login should handle empty password`() {
         // Given
         val emptyPasswordRequest = validLoginRequest.copy(password = "")
-        whenever(authenticationManager.authenticate(any())).thenThrow(BadCredentialsException("Empty password"))
+        whenever(userService.login(emptyPasswordRequest)).thenThrow(BadCredentialsException("Empty password"))
 
         // When & Then
         mockMvc.perform(
@@ -254,7 +246,7 @@ class UserControllerTest {
     @Test
     fun `login should handle non-existent user`() {
         // Given
-        whenever(authenticationManager.authenticate(any())).thenThrow(BadCredentialsException("User not found"))
+        whenever(userService.login(any())).thenThrow(BadCredentialsException("User not found"))
 
         // When & Then
         mockMvc.perform(
@@ -288,11 +280,14 @@ class UserControllerTest {
     }
 
     @Test
-    fun `login should call authentication manager with correct parameters`() {
+    fun `login should call userService with correct parameters`() {
         // Given
-        whenever(authenticationManager.authenticate(any())).thenReturn(mock())
-        whenever(userDetailsService.loadUserByUsername(validLoginRequest.username)).thenReturn(mockUserDetails)
-        whenever(jwtUtil.generateToken(mockUserDetails)).thenReturn(mockJwtToken)
+        whenever(userService.login(any())).thenReturn(
+            LoginResponse(
+                mockJwtToken,
+                UserData(username = validLoginRequest.username, email = mockUserEntity.email, id = mockUserEntity.id!!)
+            )
+        )
 
         // When
         mockMvc.perform(
@@ -300,12 +295,10 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validLoginRequest))
         )
+            .andExpect(status().isOk)
 
-        // Then
-        verify(authenticationManager).authenticate(argThat<UsernamePasswordAuthenticationToken> { token ->
-            token.principal == "testuser" && 
-            token.credentials == "password123" &&
-            token.authorities.isEmpty()
+        verify(userService).login(argThat { request ->
+            request.username == validLoginRequest.username && request.password == validLoginRequest.password
         })
     }
 

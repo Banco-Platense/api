@@ -12,21 +12,40 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.*
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.core.userdetails.UserDetailsService
+import com.banco_platense.api.config.JwtUtil
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.UUID
+import com.banco_platense.api.dto.LoginRequest
+import com.banco_platense.api.dto.LoginResponse
+import com.banco_platense.api.dto.UserData
+import org.springframework.security.core.userdetails.UserDetails
+import org.junit.jupiter.api.Assertions.assertThrows
 
 @ExtendWith(MockitoExtension::class)
 class UserServiceTest {
 
     @Mock
     private lateinit var userRepository: UserRepository
-    
+
     @Mock
     private lateinit var walletService: WalletService
-    
+
     @Mock
     private lateinit var passwordEncoder: PasswordEncoder
-    
+
+    @Mock
+    private lateinit var authenticationManager: AuthenticationManager
+
+    @Mock
+    private lateinit var userDetailsService: UserDetailsService
+
+    @Mock
+    private lateinit var jwtUtil: JwtUtil
+
     @InjectMocks
     private lateinit var userService: UserService
 
@@ -45,7 +64,7 @@ class UserServiceTest {
 
     @BeforeEach
     fun setup() {
-        reset(userRepository, walletService, passwordEncoder)
+        reset(userRepository, walletService, passwordEncoder, authenticationManager, userDetailsService, jwtUtil)
     }
 
     @Test
@@ -65,7 +84,7 @@ class UserServiceTest {
         // Then
         assertTrue(result is RegistrationResult.Success)
         assertEquals(savedUserId, (result as RegistrationResult.Success).userId)
-        
+
         verify(userRepository).findByEmail(validRegistrationRequest.email)
         verify(userRepository).findByUsername(validRegistrationRequest.username)
         verify(userRepository).save(any<User>())
@@ -83,7 +102,7 @@ class UserServiceTest {
         // Then
         assertTrue(result is RegistrationResult.Failure)
         assertEquals("Invalid email format", (result as RegistrationResult.Failure).message)
-        
+
         verify(userRepository, never()).findByEmail(any())
         verify(userRepository, never()).findByUsername(any())
         verify(userRepository, never()).save(any<User>())
@@ -101,7 +120,7 @@ class UserServiceTest {
         // Then
         assertTrue(result is RegistrationResult.Failure)
         assertEquals("Email already exists", (result as RegistrationResult.Failure).message)
-        
+
         verify(userRepository).findByEmail(validRegistrationRequest.email)
         verify(userRepository, never()).findByUsername(any())
         verify(userRepository, never()).save(any<User>())
@@ -120,7 +139,7 @@ class UserServiceTest {
         // Then
         assertTrue(result is RegistrationResult.Failure)
         assertEquals("Username already exists", (result as RegistrationResult.Failure).message)
-        
+
         verify(userRepository).findByEmail(validRegistrationRequest.email)
         verify(userRepository).findByUsername(validRegistrationRequest.username)
         verify(userRepository, never()).save(any<User>())
@@ -146,7 +165,7 @@ class UserServiceTest {
 
         // Then
         assertTrue(result is RegistrationResult.Success)
-        
+
         verify(passwordEncoder).encode(validRegistrationRequest.password)
         verify(userRepository).save(argThat<User> { user ->
             user.passwordHash == encodedPassword
@@ -174,7 +193,7 @@ class UserServiceTest {
 
             val result = userService.registerUser(request)
             assertTrue(result is RegistrationResult.Success, "Email $email should be valid")
-            
+
             reset(userRepository, walletService, passwordEncoder)
         }
 
@@ -193,6 +212,48 @@ class UserServiceTest {
             val result = userService.registerUser(request)
             assertTrue(result is RegistrationResult.Failure, "Email $email should be invalid")
             assertEquals("Invalid email format", (result as RegistrationResult.Failure).message)
+        }
+    }
+
+    @Test
+    fun `login should return LoginResponse when credentials are valid`() {
+        // Given
+        val loginRequest = LoginRequest(username = "testuser", password = "password123")
+        val mockUserEntity = User(
+            id = UUID.randomUUID(),
+            email = "test@example.com",
+            username = "testuser",
+            passwordHash = "hashed"
+        )
+        val mockUserDetails: UserDetails = mock()
+        val mockJwtToken = "jwt-token"
+        whenever(authenticationManager.authenticate(any())).thenReturn(mock())
+        whenever(userDetailsService.loadUserByUsername(loginRequest.username)).thenReturn(mockUserDetails)
+        whenever(jwtUtil.generateToken(mockUserDetails)).thenReturn(mockJwtToken)
+        whenever(userRepository.findByUsername(loginRequest.username)).thenReturn(mockUserEntity)
+
+        // When
+        val response = userService.login(loginRequest)
+
+        // Then
+        assertEquals(mockJwtToken, response.token)
+        assertEquals(loginRequest.username, response.user.username)
+        verify(authenticationManager).authenticate(argThat<UsernamePasswordAuthenticationToken> {
+            principal == loginRequest.username && credentials == loginRequest.password
+        })
+        verify(userDetailsService).loadUserByUsername(loginRequest.username)
+        verify(jwtUtil).generateToken(mockUserDetails)
+    }
+
+    @Test
+    fun `login should throw AuthenticationException when credentials invalid`() {
+        // Given
+        val loginRequest = LoginRequest(username = "testuser", password = "wrong")
+        whenever(authenticationManager.authenticate(any())).thenThrow(BadCredentialsException("Invalid credentials"))
+
+        // When/Then
+        assertThrows(BadCredentialsException::class.java) {
+            userService.login(loginRequest)
         }
     }
 }
